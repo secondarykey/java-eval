@@ -1,87 +1,95 @@
 package com.github.secondarykey.calculator;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.github.secondarykey.calculator.Token.Control;
 import com.github.secondarykey.calculator.Token.Operator;
 import com.github.secondarykey.calculator.Token.Type;
 import com.github.secondarykey.calculator.Token.Value;
 
 /**
- * ”»’è—p‚Ì•]‰¿Ší
+ * è©•ä¾¡å™¨
  * <pre>
- * •Ï”‚ğ–„‚ß‚ñ‚ÅA‚»‚Ì•¶š—ñ‚Ìtrue/false‚ğ”»’è‚Å‚«‚é•]‰¿Ší
+ * ï¼‘è¡Œã®å®Ÿè£…ã‚’å…ƒã«
+ * å­—å¥è§£æ(Lexer)ã€æ§‹æ–‡è§£æ(Paser)ã€è©•ä¾¡(evalute)ã‚’è¡Œã†
  * </pre>
- * @author secon
  */
 public class Expression {
 
-	/** ‰ğÍ‚µ‚½\•¶–Ø@**/
-	private List<Token> ast;
+	private Token ast;
 
 	/**
-	 * ƒRƒ“ƒXƒgƒ‰ƒNƒ^
+	 * ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
 	 * <pre>
-	 * š‹å‰ğÍ‚Æ\‘¢‰ğÍ‚ğs‚¤
+	 * å­—å¥è§£æã€æ§‹æ–‡è§£æã‚’è¡Œã„ã€æ§‹æ–‡æœ¨ã‚’ä¿æŒã™ã‚‹
 	 * </pre>
-	 * @param line
+	 * @param line è¨ˆç®—å¼
 	 */
 	public Expression(String line) {
-		List<Token> tokenList = lexical(line);
+		//å­—å¥è§£æå®Ÿè¡Œ
+		Lexer lex = new Lexer(line);
+		List<Token> tokenList = lex.analysis();
+
 		ast = parse(tokenList);
 	}
 
-	/**
-	 * š‹å‰ğÍ‚ğs‚¤
-	 * @param line
-	 * @return
-	 */
-	private List<Token> lexical(String line) {
-		Lexer lex = new Lexer(line);
-		return lex.analysis();
-	}
 
 	/**
-	 * Token‚Ì—Dæ‡ˆÊ‚ğŒ©‚ÄA\‘¢‚ğİ’è‚·‚é
-	 * @param values š‹å‰ğÍŒã‚Ìƒg[ƒNƒ“
-	 * @return \‘¢‚ğİ’è‚µ‚½ƒg[ƒNƒ“
+	 * æ§‹æ–‡è§£æ
+	 * <pre>
+	 * å­—å¥è§£æãƒªã‚¹ãƒˆã‹ã‚‰æ§‹æ–‡è§£æã‚’è¡Œã†
+	 * ç¾çŠ¶ã§ã¯æ§‹æ–‡æœ¨ãŒï¼’æœ¬ã«ãªã‚‹äºˆå®šã¯ãªã„
+	 * </pre>
 	 */
-	private List<Token> parse(List<Token> values) {
+	private Token parse(List<Token> values) {
 		Parser parser = new Parser(values);
 		List<Token> rtn = new ArrayList<>();
 		while( parser.hasNext() ) {
 			rtn.add(parser.get(0));
 		}
-		return rtn;
+		if ( rtn.size() > 1 ) {
+			throw new AstException("ç¾çŠ¶æƒ³å®šã—ã¦ãªã„æ§‹æ–‡æœ¨ã®å¯èƒ½æ€§ãŒã‚ã‚Šã¾ã™ã€‚");
+		}
+		return rtn.get(0);
 	}
 
 	/**
-	 * Œ¤èr‚ğÀs
-	 * @param arguments ˆø”
-	 * @return 
+	 * è§£æ
+	 * <pre>
+	 * æ§‹æ–‡æœ¨ã®è§£æã‚’è¡Œã†
+	 * </pre>
+	 * @param arguments ãƒ—ãƒ­ã‚°ãƒ©ãƒŸãƒ³ã‚°å¼•æ•°
 	 */
 	public Object eval(Variable arguments) {
-		if ( ast.size() > 1 ) {
-			System.out.println("\•¶–Ø‚ª“ñ–{");
-		}
-
-		for ( Token token : ast ) {
-			Object obj = expression(token,arguments);
-			return obj;
-		}
-		throw new RuntimeException("\•¶–Ø‚ª‘¶İ‚µ‚È‚¢");
+		return expression(ast,arguments);
 	}
 
 	/**
-	 * Token“à‚ÌŒvZ
-	 * @param token ‘ÎÛ‚Ìƒg[ƒNƒ“
-	 * @param arguments 
+	 * è§£æ
+	 * <pre>
+	 * ãƒˆãƒ¼ã‚¯ãƒ³ã«å¯¾ã—ã¦å®Ÿè¡Œã‚’è¡Œã†
+	 * </pre>
+	 * @param token è§£æå¯¾è±¡ãƒˆãƒ¼ã‚¯ãƒ³
+	 * @param args ãƒ—ãƒ­ã‚°ãƒ©ãƒŸãƒ³ã‚°å¼•æ•°
 	 */
 	private Object expression(Token token, Variable args) {
+
 		Type type = token.getType();
 		String val = token.getValue();
-
+	
+		if ( type == Operator.NOT ) {
+			Object right = expression(token.right(),args);	
+			if ( !(right instanceof Boolean) ) {
+				throw new RuntimeException("Notæ¼”ç®—å­ã«å¯¾ã—ã¦Booelanã˜ã‚ƒãªã„å€¤ãŒå…¥ã£ã¦ã„ã¾ã™");
+			}
+			return !(Boolean)right;
+		}
+		
 		if ( type instanceof Value ) {
+			
 			if ( type == Value.STRING ) {
 				return val;
 			} else if ( type == Value.INTEGER ) {
@@ -89,12 +97,68 @@ public class Expression {
 			} else if ( type == Value.REAL ) {
 				return Double.parseDouble(val);
 			} else if ( type == Value.IDENTIFIER ) {
-				if ( val == "null" ) {
+				if ( val.equals("null") ) {
 					return null;
+				} else if ( val.equals("true") ) {
+					return true;
+				} else if ( val.equals("false") ) {
+					return false;
 				}
-				throw new RuntimeException("Œ»İnullˆÈŠO‚Ì•¶š—ñ’l‚ÍƒTƒ|[ƒg‚µ‚Ä‚¢‚Ü‚¹‚ñB");
+				throw new RuntimeException("äºˆç´„èªãŒå­˜åœ¨ã—ã¾ã›ã‚“[" + val + "]");
+				 
 			} else if ( type == Value.VARIABLE ) {
 				return args.get(val);
+			} else if ( type == Value.INVOKER ) {
+
+				int dot = val.indexOf(".");
+				String valName = val.substring(0, dot);
+				String funcName = val.substring(dot+1);
+			
+				Object valObj = args.get(valName);
+				Class<?> clazz = valObj.getClass();
+				
+				Token right = token.right();
+				if ( right.getType() == Control.NOPARAM ) {
+					Method method;
+					try {
+						method = clazz.getMethod(funcName);
+						return method.invoke(valObj);
+					} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+						throw new ExpressionException("é–¢æ•°å®Ÿè¡Œä¾‹å¤–(å¼•æ•°ãªã—):" + funcName,e);
+					}
+				} else {
+
+					Object arg = expression(right,args);	
+					String className = "";
+					try {
+						Class<? extends Object> argClass = arg.getClass();
+						className = argClass.getSimpleName();
+						Method[] methods = clazz.getMethods();
+						Method method = null;
+						for ( Method wk : methods ) {
+							if ( !wk.getName().equals(funcName) ) {
+								continue;
+							}
+							Class<?>[] types = wk.getParameterTypes();
+							if ( types.length != 1 ) {
+								continue;
+							}
+
+							if ( types[0].isAssignableFrom(argClass) ) {
+								System.out.println(types[0].getName());
+								method = wk;
+							}
+						}
+
+						if ( method == null ) {
+							throw new NoSuchMethodException();
+						}
+						
+						return method.invoke(valObj,arg);
+					} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+						throw new ExpressionException("é–¢æ•°å®Ÿè¡Œä¾‹å¤–:" + funcName + ",å¼•æ•°å‹:" + className,e);
+					}
+				}
 			}
 		} else if ( type instanceof Operator ) {
 			
@@ -103,7 +167,7 @@ public class Expression {
 
 			Class<? extends Object> clazz = left.getClass();
 			if ( clazz != right.getClass() ) {
-				throw new RuntimeException("”äŠr‚µ‚Ä‚¢‚éƒNƒ‰ƒX‚ªˆá‚¢‚Ü‚·" + clazz.getSimpleName() + " != " + right.getClass().getSimpleName());
+				throw new RuntimeException("" + clazz.getSimpleName() + " != " + right.getClass().getSimpleName());
 			}
 
 			if ( type == Operator.EQ ) {
@@ -146,6 +210,34 @@ public class Expression {
 			}
 		}
 
-		throw new RuntimeException("‘z’è‚µ‚Ä‚È‚¢ƒg[ƒNƒ“ƒ^ƒCƒv‚Å‚·B" + type.name());
+		throw new ExpressionException("åˆ¤å®šãŒãªã„ã‚¿ã‚¤ãƒ—ã§ã™" + type.name());
+	}
+
+	/**
+	 * è©•ä¾¡å™¨ã®ä¾‹å¤–
+	 */
+	private class ExpressionException extends RuntimeException {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+
+		public ExpressionException(String string) {
+			super(string);
+		}
+
+		public ExpressionException(String string, Exception e) {
+			super(string,e);
+		}
+	}
+
+	/**
+	 * æ§‹æ–‡æœ¨ä¾‹å¤– 
+	 */
+	private class AstException extends RuntimeException {
+		private static final long serialVersionUID = 1L;
+		public AstException(String string) {
+			super(string);
+		}
 	}
 }

@@ -4,14 +4,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * š‹å
- * @author secon
  */
 public class Token {
 
-	/** Œ^ **/
 	private Type type;
-	/** ‰ğÍ‚ÌŒ^‚Ì’l **/
 	private String value;
 	
 	private Token left;
@@ -50,8 +46,7 @@ public class Token {
 		} else if ( type.equals(Control.EOT) ) {
 			return -1;
 		}
-		//TODO ƒGƒ‰[‚ğİ’è
-		throw new RuntimeException("‰‰Zq‚ª‘¶İ‚·‚éˆÊ’u‚É‘¼‚Ì’l‚ª‘¶İ‚µ‚Ü‚·B" + this);
+		throw new RuntimeException("å„ªå…ˆé †ä½ã¯å­˜åœ¨ã—ãªã„ã¯ãš" + this);
 	}
 
 	public String toString() {
@@ -59,17 +54,15 @@ public class Token {
 	}
 
 	/**
-	 * Œ^’è‹`
-	 * @author secon
 	 */
 	public interface Type {
-		//•¶š—ñ‚©‚çÅI“_‚ÌƒCƒ“ƒfƒbƒNƒX‚ğæ“¾
 		int getLastIndex(String val);
 		String name();
 	}
 
 	public enum Control implements Type {
 
+		NOPARAM,
 		EOT;
 
 		@Override
@@ -79,7 +72,6 @@ public class Token {
 
 	}
 	/**
-	 * Zp‰‰Zq’è‹`
 	 * @author secon
 	 */
 	public enum Operator implements Type {
@@ -91,7 +83,7 @@ public class Token {
 		//MOD("%",80),
 
 		OPEN("(",100),
-		CLOSE(")",100),
+		CLOSE(")",0),
 
 		EQ("==",50),
 		NE("!=",50),
@@ -129,18 +121,16 @@ public class Token {
 	}
 
 	/**
-	 * ’lŒn‚Ì’è‹`
 	 * <pre>
-	 * ³‹K•\Œ»‚Å‰ğÍ‚·‚é‚à‚Ì
 	 * </pre>
-	 * @author secon
 	 */
 	public enum Value implements Type {
 
 		STRING("\\\"[^\\\"]+\\\""),
 		INTEGER("\\d+"),
-		REAL ("(\\d*)\\.\\d+"),
+		REAL ("\\d+\\.\\d+"),
 		VARIABLE("\\$\\w+"),
+		INVOKER("(\\$\\w+)(\\.)(\\w+)"),
 		IDENTIFIER("\\w+");
 
 		private Pattern pattern;

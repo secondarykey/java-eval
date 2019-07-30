@@ -2,17 +2,18 @@ package com.github.secondarykey.calculator;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.jupiter.api.*;
 
 import com.github.secondarykey.calculator.Expression;
 import com.github.secondarykey.calculator.Variable;
 
-
 class ExpressionTest {
 
 	@Test
 	void testIntValue() {
-
 		Variable var = new Variable();
 		var.add("value", 1);
 		Expression eq = new Expression("$value == 1");
@@ -25,23 +26,36 @@ class ExpressionTest {
 	}
 
 	@Test
-	void testStringValue() {
+	void testRealValue() {
+		Variable var = new Variable();
+		var.add("value", 2.5);
+		Expression gt = new Expression("$value > 1.0");
+		assertTrue((Boolean)gt.eval(var));
 
+		Expression lt = new Expression("$value < 1.0");
+		assertFalse((Boolean)lt.eval(var));
+
+		var.add("value", 0.5);
+		assertFalse((Boolean)gt.eval(var));
+		assertTrue((Boolean)lt.eval(var));
+	}
+
+	@Test
+	void testStringValue() {
 		Variable var = new Variable();
 		var.add("value", "Test");
-
 		Expression stringEq = new Expression("$value == \"Test\"");
 		Expression stringNe = new Expression("$value != \"Test\"");
 		assertTrue((Boolean)stringEq.eval(var));
 		var.add("value", "Test1");
 		assertFalse((Boolean)stringEq.eval(var));
-
 		var.add("value", "Test");
 		assertFalse((Boolean)stringNe.eval(var));
 		var.add("value", "Test1");
 		assertTrue((Boolean)stringNe.eval(var));
 	}
 
+	@Test
 	void testBoolValue() {
 		Expression three1 = new Expression("1 == 1 && 2 == 2");
 		assertTrue((Boolean)three1.eval(null));
@@ -56,6 +70,7 @@ class ExpressionTest {
 		assertFalse((Boolean)v.eval(var));
 	}
 
+	@Test
 	void testOpenClose() {
 		Expression three1 = new Expression("(1 == 1)");
 		assertTrue((Boolean)three1.eval(null));
@@ -63,7 +78,44 @@ class ExpressionTest {
 		assertTrue((Boolean)three2.eval(null));
 	}	
 
+
+	@Test
+	void testIdentity() {
+		Expression iden1 = new Expression("true");
+		assertTrue((Boolean)iden1.eval(null));
+		Expression iden2 = new Expression("false");
+		assertFalse((Boolean)iden2.eval(null));
+		Expression iden3 = new Expression("null");
+		assertNull(iden3.eval(null));
+	}	
 		
+	@Test
+	void testNot() {
+		Expression three1 = new Expression("!(1 == 1)");
+		assertFalse((Boolean)three1.eval(null));
+		Expression three2 = new Expression("!(1 == 2 || (2 == 2))");
+		assertFalse((Boolean)three2.eval(null));
+		Expression three3 = new Expression("!(false || !false)");
+		assertFalse((Boolean)three3.eval(null));
+		Expression three4 = new Expression("!false && !false");
+		assertTrue((Boolean)three4.eval(null));
+	}	
+
+	@Test
+	void testInvoke() {
+		Variable var = new Variable();
+		List<String> list = new ArrayList<>();
+		list.add("test");
+		var.add("value", list);
 		
-		
+		Expression invoke1 = new Expression("$value.size() == 1");
+		assertTrue((Boolean)invoke1.eval(var));
+
+		Expression invoke2 = new Expression("$value.contains(" + "\"test\"" +  ")");
+		assertTrue((Boolean)invoke2.eval(var));
+	
+		Expression invoke3 = new Expression("$value.contains(" + "\"other\"" +  ")");
+		assertFalse((Boolean)invoke3.eval(var));
+
+	}	
 }

@@ -5,8 +5,6 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * •Ï”ƒŠƒXƒg
- * @author secon
  */
 public class Variable {
 	private Map<String,Object> values = new HashMap<>();

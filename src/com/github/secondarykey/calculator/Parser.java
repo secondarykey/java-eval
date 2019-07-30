@@ -9,15 +9,18 @@ import com.github.secondarykey.calculator.Token.Type;
 import com.github.secondarykey.calculator.Token.Value;
 
 /**
- * Œê‹å‰ğÍŠí
- * @author secon
+ * æ§‹æ–‡è§£æå™¨
+ * <pre>
+ * </pre>
  */
 public class Parser {
+
 	private int idx = 0;
+
 	private List<Token> values;
+
 	public Parser(List<Token> values) {
 		this.values = new ArrayList<>(values);
-		//I’[‚ğ’Ç‰Á
 		this.values.add(new Token(Control.EOT,null));
 	}
 
@@ -33,15 +36,19 @@ public class Parser {
 		return values.get(idx);
 	}
 
+	private Token next() {
+		Token rtn = getToken();
+		increment();
+		return rtn;
+	}
+
 	private void increment() {
 		++idx;
 	}
 
 	public Token get(int priority) {
 	
-		Token left = lead(getToken());
-		increment();
-
+		Token left = lead(next());
 		Token right = getToken();
 
 		while ( priority < right.getPriority() ) {
@@ -61,37 +68,53 @@ public class Parser {
 			right.SetRight(get(priority-1));
 			return right;
 		} else {
-			throw new ParseException("‰‰Zq‚ÌˆÊ’u‚ª‚¨‚©‚µ‚¢" + right);
+			throw new ParseException("ã‚ªãƒšãƒ¬ãƒ¼ã‚¿ãƒ¼ä»¥å¤–ã§ã®ãƒã‚¤ãƒ³ãƒ‰ãŒå­˜åœ¨" + right);
 		}
 	}
 
 	private Token lead(Token token) {
 		Type type = token.getType();
 		if ( type instanceof Value ) {
+			if ( type == Value.INVOKER ) {
+				Token val = next();
+				if ( val.getType() != Operator.OPEN ) {
+					throw new ParseException("é–¢æ•°å‘¼ã³å‡ºã—ã‚¿ã‚¤ãƒ—ã®æ›¸ãæ–¹ã«ä¸æ­£ãŒã‚ã‚Šã¾ã™ã€‚" + val);
+				}
+
+				Token close = getToken();
+				if ( close.getType() != Operator.CLOSE ) {
+					token.SetRight(close);
+					increment();
+				} else {
+					token.SetRight(new Token(Control.NOPARAM,null));
+				}
+				increment();
+				return token;
+			}
 			return token;
 		} else if ( type == Operator.OPEN ) {
 			Token left = get(0);
-			search();
+			checkClose();
 			return left;
-		//} else if ( type == Operator.NOT ) {
-			//return token;
+		} else if ( type == Operator.NOT ) {
+			Token val = get(token.getPriority());
+			token.SetRight(val);
+			return token;
 		} else {
-			throw new ParseException("¶•Ó‚É—\Šú‚µ‚È‚¢’l‚ª‘¶İ‚µ‚Ü‚·B" + token);
+			throw new ParseException("leadæ™‚ã®ä¾‹å¤–" + token);
 		}
 	}
 	
-	private void search() {
+	private void checkClose() {
 		Token token = getToken();
 		if ( token.getType() != Operator.CLOSE )  {
-			throw new RuntimeException("•Â‚¶ƒJƒbƒR‚Ìó‘Ô‚ª‚¨‚©‚µ‚¢" + token);
+			throw new RuntimeException("" + token);
 		}
 		increment();
 		return;
 	}
 
 	/**
-	 * \‘¢‰ğÍ‚Ì—áŠO
-	 * @author secon
 	 */
 	public class ParseException extends RuntimeException {
 		private static final long serialVersionUID = 1L;
