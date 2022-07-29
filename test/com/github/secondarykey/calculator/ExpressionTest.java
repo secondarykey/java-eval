@@ -7,9 +7,6 @@ import java.util.List;
 
 import org.junit.jupiter.api.*;
 
-import com.github.secondarykey.calculator.Expression;
-import com.github.secondarykey.calculator.Variable;
-
 class ExpressionTest {
 
 	@Test

@@ -1,7 +1,5 @@
 package com.github.secondarykey.calculator;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -79,15 +77,15 @@ public class Expression {
 
 		Type type = token.getType();
 		String val = token.getValue();
-	
+
 		if ( type == Operator.NOT ) {
 			Object right = expression(token.right(),args);	
-			if ( !(right instanceof Boolean) ) {
-				throw new RuntimeException("Not演算子に対してBooelanじゃない値が入っています");
+			if ( !ClassUtil.isBoolean(right) ) {
+				throw new ExpressionException("Not演算子に対してBooelanじゃない値が入っています");
 			}
 			return !(Boolean)right;
 		}
-		
+
 		if ( type instanceof Value ) {
 			
 			if ( type == Value.STRING ) {
@@ -104,8 +102,7 @@ public class Expression {
 				} else if ( val.equals("false") ) {
 					return false;
 				}
-				throw new RuntimeException("予約語が存在しません[" + val + "]");
-				 
+				throw new ExpressionException("予約語が存在しません[" + val + "]");
 			} else if ( type == Value.VARIABLE ) {
 				return args.get(val);
 			} else if ( type == Value.INVOKER ) {
@@ -115,50 +112,18 @@ public class Expression {
 				String funcName = val.substring(dot+1);
 			
 				Object valObj = args.get(valName);
-				Class<?> clazz = valObj.getClass();
-				
+	
+				Object[] methodArgs = null;
+
 				Token right = token.right();
-				if ( right.getType() == Control.NOPARAM ) {
-					Method method;
-					try {
-						method = clazz.getMethod(funcName);
-						return method.invoke(valObj);
-					} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-						throw new ExpressionException("関数実行例外(引数なし):" + funcName,e);
-					}
-				} else {
-
+				if ( right.getType() != Control.NOPARAM ) {
+					//TODO 現状１つしかオブジェクトを返せない
 					Object arg = expression(right,args);	
-					String className = "";
-					try {
-						Class<? extends Object> argClass = arg.getClass();
-						className = argClass.getSimpleName();
-						Method[] methods = clazz.getMethods();
-						Method method = null;
-						for ( Method wk : methods ) {
-							if ( !wk.getName().equals(funcName) ) {
-								continue;
-							}
-							Class<?>[] types = wk.getParameterTypes();
-							if ( types.length != 1 ) {
-								continue;
-							}
-
-							if ( types[0].isAssignableFrom(argClass) ) {
-								System.out.println(types[0].getName());
-								method = wk;
-							}
-						}
-
-						if ( method == null ) {
-							throw new NoSuchMethodException();
-						}
-						
-						return method.invoke(valObj,arg);
-					} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-						throw new ExpressionException("関数実行例外:" + funcName + ",引数型:" + className,e);
-					}
+					methodArgs = new Object[1];
+					methodArgs[0] = arg;
 				}
+				
+				return ClassUtil.call(valObj,funcName,methodArgs);
 			}
 		} else if ( type instanceof Operator ) {
 			
@@ -170,47 +135,79 @@ public class Expression {
 				throw new RuntimeException("" + clazz.getSimpleName() + " != " + right.getClass().getSimpleName());
 			}
 
-			if ( type == Operator.EQ ) {
-				return left.equals(right);
-			} else if ( type == Operator.NE ) {
-				return !left.equals(right);
-			} else if ( type == Operator.GT ) {
-				if ( clazz == Integer.class ) {
-					return (Integer)left > (Integer)right;
-				} else {
-					return (Double)left > (Double)right;
-				}
-			} else if ( type == Operator.GE ) {
-				if ( clazz == Integer.class ) {
-					return (Integer)left >= (Integer)right;
-				} else {
-					return (Double)left >= (Double)right;
-				}
-			} else if ( type == Operator.LT ) {
-				if ( clazz == Integer.class ) {
-					return (Integer)left < (Integer)right;
-				} else {
-					return (Double)left < (Double)right;
-				}
-			} else if ( type == Operator.LE ) {
-				if ( clazz == Integer.class ) {
-					return (Integer)left <= (Integer)right;
-				} else {
-					return (Double)left <= (Double)right;
-				}
-			} else if ( type == Operator.AND ) {
-				if ( clazz == Boolean.class ) {
-					return (Boolean)left && (Boolean)right;
-				} else {
-				}
-			} else if ( type == Operator.OR ) {
-				if ( clazz == Boolean.class ) {
-					return (Boolean)left || (Boolean)right;
-				}
-			}
+			//評価を行う
+			return operation((Operator)type,left,right);
 		}
 
 		throw new ExpressionException("判定がないタイプです" + type.name());
+	}
+
+
+	/**
+	 * 演算子処理を行う
+	 * @param type
+	 * @param left
+	 * @param right
+	 * @return
+	 */
+	private Object operation(Operator op, Object left, Object right) {
+	
+		//TODO 同じクラスかを判定
+		if ( op == Operator.EQ ) {
+			return left.equals(right);
+		} else if ( op == Operator.NE ) {
+			return !left.equals(right);
+		} else if ( op.isComparable() ) {
+			//右辺、左辺のチェック
+			if ( ClassUtil.isComparableNumber(left) && 
+					ClassUtil.isComparableNumber(right) ) {
+				@SuppressWarnings("unchecked")
+				boolean rtn = compareToNumber(op,(Comparable<Number>)left,(Number)right);
+				return rtn;
+			}
+			throw new ExpressionException("比較演算子の型がサポートされていません");
+		} else if ( op.isLogical() ) {
+			if ( ClassUtil.isBoolean(left) && 
+					ClassUtil.isBoolean(right) ) {
+				return logical(op,(Boolean)left,(Boolean)right);
+			}
+			throw new ExpressionException("論理演算子の型がサポートされていません");
+		}
+		throw new ExpressionException("演算子がサポートされていません:" + op);
+	}
+
+	/**
+	 * 論理演算子の実行
+	 * @param op
+	 * @param left
+	 * @param right
+	 * @return
+	 */
+	private Object logical(Operator op, Boolean left, Boolean right) {
+		if ( Operator.AND.equals(op) ) {
+			return left && right;
+		} else if ( Operator.OR.equals(op) ) {
+			return left || right;
+		} else if ( Operator.NOT.equals(op) ) {
+			// NOT も入るけど、呼び出し関数側ですでにチェックされている
+			return !right;
+		}
+		throw new ExpressionException("想定してない判定:" + op);
+	}
+
+
+	private boolean compareToNumber(Operator op,Comparable<Number> left,Number right) {
+		int rtn = left.compareTo(right);
+		if ( Operator.LT.equals(op) ) {
+			return rtn < 0;
+		} else if ( Operator.LE.equals(op) ) {
+			return rtn <= 0;
+		} else if ( Operator.GT.equals(op) ) {
+			return rtn > 0;
+		} else if ( Operator.GE.equals(op) ) {
+			return rtn >= 0;
+		}
+		throw new ExpressionException("想定してない判定:" + op);
 	}
 
 	/**
@@ -224,10 +221,6 @@ public class Expression {
 
 		public ExpressionException(String string) {
 			super(string);
-		}
-
-		public ExpressionException(String string, Exception e) {
-			super(string,e);
 		}
 	}
 

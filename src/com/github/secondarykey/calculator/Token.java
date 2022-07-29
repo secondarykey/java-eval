@@ -118,6 +118,25 @@ public class Token {
 			}
 			return -1;
 		}
+
+		/**
+		 * 
+		 * @return
+		 */
+		boolean isComparable() {
+			if ( this.equals(LT) || this.equals(LE) ||
+			     this.equals(GT) || this.equals(GE) ) {
+				return true;
+			}
+			return false;
+		}
+
+		boolean isLogical() {
+			if ( this.equals(AND) || this.equals(OR) || this.equals(NOT) ) {
+				return true;
+			}
+			return false;
+		}
 	}
 
 	/**
