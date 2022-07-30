@@ -1,4 +1,4 @@
-package com.github.secondarykey.calculator;
+package com.github.secondarykey.calculator.util;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
