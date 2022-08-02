@@ -33,13 +33,26 @@ public class Token {
 		return right;
 	}
 
-	public void SetLeft(Token token) {
+	/**
+	 * 左辺の設定
+	 * @param token
+	 */
+	public void setLeft(Token token) {
 		this.left = token;
 	}
 
-	public void SetRight(Token token) {
+	/**
+	 * 右辺の設定
+	 * @param token
+	 */
+	public void setRight(Token token) {
 		this.right = token;
 	}	
+
+	/**
+	 * 優先順位の取得
+	 * @return
+	 */
 	public int getPriority() {
 		if ( type instanceof Operator ) {
 			return ((Operator)type).getPriority();
@@ -60,6 +73,10 @@ public class Token {
 		String name();
 	}
 
+	/**
+	 * 制御系のデータ
+	 * @author secon
+	 */
 	public enum Control implements Type {
 
 		NOPARAM,
@@ -72,6 +89,7 @@ public class Token {
 
 	}
 	/**
+	 * 演算子
 	 * @author secon
 	 */
 	public enum Operator implements Type {
@@ -84,6 +102,9 @@ public class Token {
 
 		OPEN("(",100),
 		CLOSE(")",0),
+
+		IFOPEN("{",100),
+		IFCLOSE("}",0),
 
 		EQ("==",50),
 		NE("!=",50),
@@ -140,6 +161,7 @@ public class Token {
 	}
 
 	/**
+	 * 値
 	 * <pre>
 	 * </pre>
 	 */
@@ -168,5 +190,4 @@ public class Token {
 		}
 
 	}
-
 }
