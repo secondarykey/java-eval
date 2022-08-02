@@ -1,0 +1,6 @@
+$rtn.add("test1");
+$rtn.add("test2");
+
+if ( $flag ) {
+  $rtn.add("test3");
+}
