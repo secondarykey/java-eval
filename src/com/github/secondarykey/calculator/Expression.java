@@ -89,13 +89,14 @@ public class Expression {
 
 		if ( type instanceof Value ) {
 			
-			if ( type == Value.STRING ) {
+			if ( type.equals(Value.STRING) ) {
 				return val;
-			} else if ( type == Value.INTEGER ) {
+			} else if ( type.equals(Value.INTEGER) ) {
 				return Integer.parseInt(val);
-			} else if ( type == Value.REAL ) {
+			} else if ( type.equals(Value.REAL) ) {
 				return Double.parseDouble(val);
-			} else if ( type == Value.IDENTIFIER ) {
+			} else if ( type.equals(Value.IDENTIFIER) ) {
+				//TODO 変数系がくる
 				if ( val.equals("null") ) {
 					return null;
 				} else if ( val.equals("true") ) {
@@ -103,10 +104,14 @@ public class Expression {
 				} else if ( val.equals("false") ) {
 					return false;
 				}
+				
+				//TODO return
 				throw new ExpressionException("予約語が存在しません[" + val + "]");
-			} else if ( type == Value.VARIABLE ) {
+			} else if ( type.equals(Value.VARIABLE) ) {
 				return args.get(val);
-			} else if ( type == Value.INVOKER ) {
+			} else if ( type.equals(Value.INVOKER) ) {
+				
+				//TODO 複数引数の対応
 
 				int dot = val.indexOf(".");
 				String valName = val.substring(0, dot);
@@ -123,7 +128,7 @@ public class Expression {
 					methodArgs = new Object[1];
 					methodArgs[0] = arg;
 				}
-				
+
 				return ClassUtil.call(valObj,funcName,methodArgs);
 			}
 		} else if ( type instanceof Operator ) {
@@ -133,6 +138,7 @@ public class Expression {
 
 			Class<? extends Object> clazz = left.getClass();
 			if ( clazz != right.getClass() ) {
+				//右辺と左辺の型が違う
 				throw new RuntimeException("" + clazz.getSimpleName() + " != " + right.getClass().getSimpleName());
 			}
 
@@ -153,7 +159,6 @@ public class Expression {
 	 */
 	private Object operation(Operator op, Object left, Object right) {
 	
-		//TODO 同じクラスかを判定
 		if ( op == Operator.EQ ) {
 			return left.equals(right);
 		} else if ( op == Operator.NE ) {
@@ -167,6 +172,8 @@ public class Expression {
 				return rtn;
 			}
 			throw new ExpressionException("比較演算子の型がサポートされていません");
+		} else if ( op.isCalc() ) {
+			return calc(op,left,right);
 		} else if ( op.isLogical() ) {
 			if ( ClassUtil.isBoolean(left) && 
 					ClassUtil.isBoolean(right) ) {
@@ -176,6 +183,42 @@ public class Expression {
 		}
 		throw new ExpressionException("演算子がサポートされていません:" + op);
 	}
+
+	/**
+	 * 計算
+	 * @param op
+	 * @param left
+	 * @param right
+	 * @return
+	 */
+	private Object calc(Operator op, Object left, Object right) {
+		boolean d = true;
+		if ( left instanceof Integer ) {
+			d = false;
+		} else if ( !(left instanceof Double) ) {
+			throw new ExpressionException(String.format("%s は計算をサーポートしていません。",left.getClass().getSimpleName()));
+		}
+
+		if ( op.equals(Operator.PLUS) ) {
+			if ( d ) return (Double)left + (Double)right;
+			return (Integer)left + (Integer)right;
+		} else if ( op.equals(Operator.MINUS) ) {
+			if ( d ) return (Double)left - (Double)right;
+			return (Integer)left - (Integer)right;
+		} else if ( op.equals(Operator.MUL) ) {
+			if ( d ) return (Double)left * (Double)right;
+			return (Integer)left * (Integer)right;
+		} else if ( op.equals(Operator.DIV) ) {
+			if ( d ) return (Double)left / (Double)right;
+			return (Integer)left / (Integer)right;
+		} else if ( op.equals(Operator.MOD) ) {
+			if ( d ) return (Double)left % (Double)right;
+			return (Integer)left % (Integer)right;
+		}
+
+		throw new ExpressionException(String.format("計算をサポートしてない演算子(%s)です。",op));
+	}
+
 
 	/**
 	 * 論理演算子の実行

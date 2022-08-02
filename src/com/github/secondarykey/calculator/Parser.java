@@ -108,7 +108,7 @@ public class Parser {
 	private void checkClose() {
 		Token token = getToken();
 		if ( token.getType() != Operator.CLOSE )  {
-			throw new RuntimeException("" + token);
+			throw new RuntimeException("閉じカッコがおかしい" + token);
 		}
 		increment();
 		return;

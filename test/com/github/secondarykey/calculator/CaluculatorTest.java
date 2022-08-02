@@ -20,7 +20,7 @@ class CaluculatorTest {
 
 		Caluculator cal = Caluculator.create(var);
 		
-		Object obj = cal.eval("if ( true ) false");
+		Object obj = cal.eval("if ( true ) { return false; } ");
 		assertTrue((Boolean)obj);
 		
 		

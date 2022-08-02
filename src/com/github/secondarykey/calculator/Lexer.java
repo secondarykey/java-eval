@@ -52,6 +52,8 @@ public class Lexer {
 
             	int index = t.getLastIndex(buf);
 
+           		//TODO 単項演算子(+,-)
+
             	//存在した場合
             	if ( index != -1 ) {
 
@@ -72,6 +74,7 @@ public class Lexer {
             			pre = 1;
             			suf = index - 1;
             		} else if ( t.equals(Operator.GT) ) {
+            			// GEと解析を間違う場合がある為、処理を行う
             			int wk = Operator.GE.getLastIndex(buf);
             			if ( wk != -1 ) {
             				index = wk;
@@ -79,6 +82,7 @@ public class Lexer {
             				t = Operator.GE;
             			}
             		} else if ( t.equals(Operator.LT) ) {
+            			// LEと解析を間違う場合がある為、処理を行う
             			int wk = Operator.LE.getLastIndex(buf);
             			if ( wk != -1 ) {
             				index = wk;

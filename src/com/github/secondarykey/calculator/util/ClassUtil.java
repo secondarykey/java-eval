@@ -106,6 +106,11 @@ public class ClassUtil {
 		return false;
 	}
 
+	/**
+	 * Booleanチェック
+	 * @param obj
+	 * @return
+	 */
 	public static boolean isBoolean(Object obj) {
 		if ( obj instanceof Boolean ) {
 			return true;

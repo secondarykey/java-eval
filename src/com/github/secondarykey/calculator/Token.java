@@ -94,11 +94,11 @@ public class Token {
 	 */
 	public enum Operator implements Type {
 
-		//PLUS("+",70),
-		//MINUS("-",70),
-		//MUL("*",80),
-		//DIV("/",80),
-		//MOD("%",80),
+		PLUS("+",70),
+		MINUS("-",70),
+		MUL("*",80),
+		DIV("/",80),
+		MOD("%",80),
 
 		OPEN("(",100),
 		CLOSE(")",0),
@@ -154,6 +154,18 @@ public class Token {
 
 		boolean isLogical() {
 			if ( this.equals(AND) || this.equals(OR) || this.equals(NOT) ) {
+				return true;
+			}
+			return false;
+		}
+
+		/**
+		 * 計算式
+		 * @return
+		 */
+		boolean isCalc() {
+			if ( this.equals(PLUS) || this.equals(MINUS) ||
+			     this.equals(MUL) || this.equals(DIV) || this.equals(MOD) ) {
 				return true;
 			}
 			return false;

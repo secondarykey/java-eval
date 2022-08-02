@@ -100,8 +100,8 @@ class ExpressionTest {
 
 	@Test
 	void testCalc() {
-		Expression three1 = new Expression("1 + 1");
-		assertEquals((Integer)three1.eval(null),2);
+		Expression add = new Expression("1 + 1");
+		assertEquals((Integer)add.eval(null),2);
 	}
 
 	@Test
