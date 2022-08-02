@@ -94,6 +94,8 @@ public class Token {
 	 */
 	public enum Operator implements Type {
 
+		SEMICOLON(";",0),
+
 		PLUS("+",70),
 		MINUS("-",70),
 		MUL("*",80),
@@ -103,8 +105,8 @@ public class Token {
 		OPEN("(",100),
 		CLOSE(")",0),
 
-		IFOPEN("{",100),
-		IFCLOSE("}",0),
+		OPEN_BLOCK("{",100),
+		CLOSE_BLOCK("}",0),
 
 		EQ("==",50),
 		NE("!=",50),

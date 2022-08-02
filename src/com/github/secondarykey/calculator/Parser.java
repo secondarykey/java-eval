@@ -43,20 +43,25 @@ public class Parser {
 	}
 
 	private void increment() {
-		++idx;
+		if ( values.size() != idx + 1 ) {
+			++idx;
+		}
 	}
 
 	public Token get(int priority) {
-	
-		Token left = lead(next());
-		Token right = getToken();
+		
+		Token n = next();
+		if ( n.getType().equals(Control.EOT) ) {
+			return n;
+		}
 
+		Token left = lead(n);
+		Token right = getToken();
 		while ( priority < right.getPriority() ) {
 			increment();
 			left = bind(left,right);
 			right = getToken();
 		}
-
 		return left;
 	}
 
@@ -75,7 +80,10 @@ public class Parser {
 	private Token lead(Token token) {
 		Type type = token.getType();
 		if ( type instanceof Value ) {
-			if ( type == Value.INVOKER ) {
+			
+			//呼び出し処理の場合
+			if ( type.equals(Value.INVOKER) ) {
+				//TODO 複数引数の処理
 				Token val = next();
 				if ( val.getType() != Operator.OPEN ) {
 					throw new ParseException("関数呼び出しタイプの書き方に不正があります。" + val);
@@ -92,16 +100,19 @@ public class Parser {
 				return token;
 			}
 			return token;
-		} else if ( type == Operator.OPEN ) {
+		} else if ( type.equals(Operator.OPEN) ) {
 			Token left = get(0);
 			checkClose();
 			return left;
-		} else if ( type == Operator.NOT ) {
+		} else if ( type.equals(Operator.NOT) ) {
 			Token val = get(token.getPriority());
 			token.setRight(val);
 			return token;
+		} else if ( type.equals(Operator.SEMICOLON) ) {
+			//改行をどうするか？
+			return get(0);
 		} else {
-			throw new ParseException("lead時の例外" + token);
+			throw new ParseException("lead()時の例外:" + token);
 		}
 	}
 	

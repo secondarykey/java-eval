@@ -18,7 +18,7 @@ import com.github.secondarykey.calculator.util.ClassUtil;
  */
 public class Expression {
 
-	private Token ast;
+	private List<Token> ast;
 
 	/**
 	 * コンストラクタ
@@ -40,19 +40,22 @@ public class Expression {
 	 * 構文解析
 	 * <pre>
 	 * 字句解析リストから構文解析を行う
-	 * 現状では構文木が２本になる予定はない
 	 * </pre>
 	 */
-	private Token parse(List<Token> values) {
+	private List<Token> parse(List<Token> values) {
+
 		Parser parser = new Parser(values);
 		List<Token> rtn = new ArrayList<>();
+
 		while( parser.hasNext() ) {
-			rtn.add(parser.get(0));
+			Token branch = parser.get(0);
+			System.out.println(branch.getType() );
+			//TODO EOTの渡し方がおかしいかも
+			if ( !branch.getType().equals(Control.EOT) ) {
+				rtn.add(branch);
+			}
 		}
-		if ( rtn.size() > 1 ) {
-			throw new AstException("現状想定してない構文木の可能性があります。");
-		}
-		return rtn.get(0);
+		return rtn;
 	}
 
 	/**
@@ -63,7 +66,13 @@ public class Expression {
 	 * @param arguments プログラミング引数
 	 */
 	public Object eval(Variable arguments) {
-		return expression(ast,arguments);
+	
+		//TODO 値の伝達ってどうするの？
+		
+		for ( Token token : ast ) {
+			expression(token,arguments);
+		}
+		return null;
 	}
 
 	/**

@@ -100,12 +100,12 @@ public class Lexer {
             			int wk = Value.REAL.getLastIndex(buf);
             			if ( wk != -1 ) {
             				index = wk;
+            				suf = index;
             				t = Value.REAL;
             			}
             		}
 
             		String val = buf.substring(pre, suf);
-            		System.out.println(val);
             		Token token = new Token(t,val);
             		rtn.add(token);
 

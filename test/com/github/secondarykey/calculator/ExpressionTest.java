@@ -100,8 +100,28 @@ class ExpressionTest {
 
 	@Test
 	void testCalc() {
-		Expression add = new Expression("1 + 1");
-		assertEquals((Integer)add.eval(null),2);
+		Expression plus = new Expression("1 + 1");
+		assertEquals((Integer)plus.eval(null),2);
+		Expression minus = new Expression("1 - 1");
+		assertEquals((Integer)minus.eval(null),0);
+		Expression mul = new Expression("5 * 2");
+		assertEquals((Integer)mul.eval(null),10);
+		Expression div = new Expression("6 / 2");
+		assertEquals((Integer)div.eval(null),3);
+		Expression mod = new Expression("5 % 3");
+		assertEquals((Integer)mod.eval(null),2);
+		
+		
+		plus = new Expression("1.2 + 1.3");
+		assertEquals((Double)plus.eval(null),2.5,3);
+		minus = new Expression("1.4 - 1.0");
+		assertEquals((Double)minus.eval(null),0.4,3);
+		mul = new Expression("1.1 * 5.0");
+		assertEquals((Double)mul.eval(null),5.5,3);
+		div = new Expression("6.0 / 2.2");
+		assertEquals((Double)div.eval(null),3,3);
+		mod = new Expression("5.2 % 3.1");
+		assertEquals((Double)mod.eval(null),2,3);
 	}
 
 	@Test
@@ -119,7 +139,6 @@ class ExpressionTest {
 	
 		Expression invoke3 = new Expression("$value.contains(" + "\"other\"" +  ")");
 		assertFalse((Boolean)invoke3.eval(var));
-
 	}	
 	
 	@Test
