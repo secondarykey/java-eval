@@ -63,9 +63,9 @@ public class Parser {
 	private Token bind(Token left, Token right) {
 	
 		if ( right.getType() instanceof Operator ) {
-			right.SetLeft(left);
+			right.setLeft(left);
 			int priority = right.getPriority();
-			right.SetRight(get(priority-1));
+			right.setRight(get(priority-1));
 			return right;
 		} else {
 			throw new ParseException("オペレーター以外でのバインドが存在" + right);
@@ -83,10 +83,10 @@ public class Parser {
 
 				Token close = getToken();
 				if ( close.getType() != Operator.CLOSE ) {
-					token.SetRight(close);
+					token.setRight(close);
 					increment();
 				} else {
-					token.SetRight(new Token(Control.NOPARAM,null));
+					token.setRight(new Token(Control.NOPARAM,null));
 				}
 				increment();
 				return token;
@@ -98,7 +98,7 @@ public class Parser {
 			return left;
 		} else if ( type == Operator.NOT ) {
 			Token val = get(token.getPriority());
-			token.SetRight(val);
+			token.setRight(val);
 			return token;
 		} else {
 			throw new ParseException("lead時の例外" + token);
