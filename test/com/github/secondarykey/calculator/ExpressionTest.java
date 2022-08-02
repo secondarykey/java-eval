@@ -99,6 +99,12 @@ class ExpressionTest {
 	}	
 
 	@Test
+	void testCalc() {
+		Expression three1 = new Expression("1 + 1");
+		assertEquals((Integer)three1.eval(null),2);
+	}
+
+	@Test
 	void testInvoke() {
 		Variable var = new Variable();
 		List<String> list = new ArrayList<>();
@@ -115,4 +121,17 @@ class ExpressionTest {
 		assertFalse((Boolean)invoke3.eval(var));
 
 	}	
+	
+	@Test
+	void testMultiLine() {
+		Variable var = new Variable();
+		List<String> list = new ArrayList<>();
+		var.add("rtn", list);
+		Expression prog = new Expression("$rtn.add(\"aaa\");$rtn.add(\"bbb\");");
+		Object rtn = prog.eval(var);
+
+		assertEquals(list.size(),2);
+		assertNull(rtn);
+	}
+
 }
