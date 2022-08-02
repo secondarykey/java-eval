@@ -7,6 +7,11 @@ import com.github.secondarykey.calculator.Token.Operator;
 import com.github.secondarykey.calculator.Token.Type;
 import com.github.secondarykey.calculator.Token.Value;
 
+/**
+ * 字句解析木
+ * @author secon
+ *
+ */
 public class Lexer {
 
 	private String value;
@@ -40,15 +45,22 @@ public class Lexer {
 		String buf = skip(value);
 
 		while ( !buf.isEmpty() ) {
+
 			boolean notfound = true;
+
 			for (Type t : types) {
+
             	int index = t.getLastIndex(buf);
+
+            	//存在した場合
             	if ( index != -1 ) {
+
             		int pre = 0;
             		int suf = index;
+
             		if ( t.equals(Value.VARIABLE) ) {
+
             			pre = 1;
-            			
             			int wk = Value.INVOKER.getLastIndex(buf);
             			if ( wk != -1 ) {
             				index = wk;
@@ -86,11 +98,10 @@ public class Lexer {
             				index = wk;
             				t = Value.REAL;
             			}
-
-
             		}
 
             		String val = buf.substring(pre, suf);
+            		System.out.println(val);
             		Token token = new Token(t,val);
             		rtn.add(token);
 
@@ -113,7 +124,11 @@ public class Lexer {
 	private String skip(String buf) {
 		return buf.trim();
 	}	
-	
+
+	/**
+	 * 字句解析例外
+	 * @author secon
+	 */
 	public class LexerException extends RuntimeException {
 		private static final long serialVersionUID = 1L;
 		public LexerException(String string) {
