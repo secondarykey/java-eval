@@ -1,5 +1,6 @@
 package com.github.secondarykey.calculator;
 
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -9,9 +10,11 @@ public class Token {
 
 	private Type type;
 	private String value;
-	
+
 	private Token left;
 	private Token right;
+
+	private List<Token> blocks;
 
 	public Token(Type type, String val) {
 		this.type = type;
@@ -33,13 +36,26 @@ public class Token {
 		return right;
 	}
 
-	public void SetLeft(Token token) {
+	/**
+	 * 左辺の設定
+	 * @param token
+	 */
+	public void setLeft(Token token) {
 		this.left = token;
 	}
 
-	public void SetRight(Token token) {
+	/**
+	 * 右辺の設定
+	 * @param token
+	 */
+	public void setRight(Token token) {
 		this.right = token;
 	}	
+
+	/**
+	 * 優先順位の取得
+	 * @return
+	 */
 	public int getPriority() {
 		if ( type instanceof Operator ) {
 			return ((Operator)type).getPriority();
@@ -60,6 +76,10 @@ public class Token {
 		String name();
 	}
 
+	/**
+	 * 制御系のデータ
+	 * @author secon
+	 */
 	public enum Control implements Type {
 
 		NOPARAM,
@@ -72,18 +92,24 @@ public class Token {
 
 	}
 	/**
+	 * 演算子
 	 * @author secon
 	 */
 	public enum Operator implements Type {
 
-		//PLUS("+",70),
-		//MINUS("-",70),
-		//MUL("*",80),
-		//DIV("/",80),
-		//MOD("%",80),
+		SEMICOLON(";",0),
+
+		PLUS("+",70),
+		MINUS("-",70),
+		MUL("*",80),
+		DIV("/",80),
+		MOD("%",80),
 
 		OPEN("(",100),
 		CLOSE(")",0),
+
+		OPEN_BLOCK("{",100),
+		CLOSE_BLOCK("}",0),
 
 		EQ("==",50),
 		NE("!=",50),
@@ -118,9 +144,41 @@ public class Token {
 			}
 			return -1;
 		}
+
+		/**
+		 * 
+		 * @return
+		 */
+		boolean isComparable() {
+			if ( this.equals(LT) || this.equals(LE) ||
+			     this.equals(GT) || this.equals(GE) ) {
+				return true;
+			}
+			return false;
+		}
+
+		boolean isLogical() {
+			if ( this.equals(AND) || this.equals(OR) || this.equals(NOT) ) {
+				return true;
+			}
+			return false;
+		}
+
+		/**
+		 * 計算式
+		 * @return
+		 */
+		boolean isCalc() {
+			if ( this.equals(PLUS) || this.equals(MINUS) ||
+			     this.equals(MUL) || this.equals(DIV) || this.equals(MOD) ) {
+				return true;
+			}
+			return false;
+		}
 	}
 
 	/**
+	 * 値
 	 * <pre>
 	 * </pre>
 	 */
@@ -150,4 +208,22 @@ public class Token {
 
 	}
 
+	public boolean isType(Type type) {
+		return type.equals(this.type);
+	}
+
+	public void setBlocks(List<Token> blocks) {
+		this.blocks = blocks;
+	}
+
+	public List<Token> getBlocks() {
+		return blocks;
+	}
+
+	public boolean isNoneRight() {
+		if ( blocks != null ) {
+			return true;
+		}
+		return false;
+	}
 }

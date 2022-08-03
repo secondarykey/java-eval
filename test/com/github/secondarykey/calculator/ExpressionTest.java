@@ -7,9 +7,6 @@ import java.util.List;
 
 import org.junit.jupiter.api.*;
 
-import com.github.secondarykey.calculator.Expression;
-import com.github.secondarykey.calculator.Variable;
-
 class ExpressionTest {
 
 	@Test
@@ -102,6 +99,32 @@ class ExpressionTest {
 	}	
 
 	@Test
+	void testCalc() {
+		Expression plus = new Expression("1 + 1");
+		assertEquals((Integer)plus.eval(null),2);
+		Expression minus = new Expression("1 - 1");
+		assertEquals((Integer)minus.eval(null),0);
+		Expression mul = new Expression("5 * 2");
+		assertEquals((Integer)mul.eval(null),10);
+		Expression div = new Expression("6 / 2");
+		assertEquals((Integer)div.eval(null),3);
+		Expression mod = new Expression("5 % 3");
+		assertEquals((Integer)mod.eval(null),2);
+		
+		
+		plus = new Expression("1.2 + 1.3");
+		assertEquals((Double)plus.eval(null),2.5,3);
+		minus = new Expression("1.4 - 1.0");
+		assertEquals((Double)minus.eval(null),0.4,3);
+		mul = new Expression("1.1 * 5.0");
+		assertEquals((Double)mul.eval(null),5.5,3);
+		div = new Expression("6.0 / 2.2");
+		assertEquals((Double)div.eval(null),3,3);
+		mod = new Expression("5.2 % 3.1");
+		assertEquals((Double)mod.eval(null),2,3);
+	}
+
+	@Test
 	void testInvoke() {
 		Variable var = new Variable();
 		List<String> list = new ArrayList<>();
@@ -116,6 +139,29 @@ class ExpressionTest {
 	
 		Expression invoke3 = new Expression("$value.contains(" + "\"other\"" +  ")");
 		assertFalse((Boolean)invoke3.eval(var));
+	}	
+	
+	@Test
+	void testMultiLine() {
+		Variable var = new Variable();
+		List<String> list = new ArrayList<>();
+		var.add("rtn", list);
+		Expression prog = new Expression("$rtn.add(\"aaa\");$rtn.add(\"bbb\");");
+		Object rtn = prog.eval(var);
 
+		assertEquals(list.size(),2);
+		assertNull(rtn);
+	}
+
+	@Test
+	void testReturn() {
+		Expression ret1 = new Expression("return \"test\"");
+		assertEquals((String)ret1.eval(null),"test");
+		Expression ret2 = new Expression("return true");
+		assertTrue((Boolean)ret2.eval(null));
+		Expression ret3 = new Expression("return false");
+		assertFalse((Boolean)ret3.eval(null));
+		Expression ret4 = new Expression("return 1+2");
+		assertEquals((Integer)ret4.eval(null),3);
 	}	
 }

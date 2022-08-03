@@ -1,14 +1,13 @@
 package com.github.secondarykey.calculator;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 import com.github.secondarykey.calculator.Token.Control;
 import com.github.secondarykey.calculator.Token.Operator;
 import com.github.secondarykey.calculator.Token.Type;
 import com.github.secondarykey.calculator.Token.Value;
+import com.github.secondarykey.calculator.util.ClassUtil;
 
 /**
  * 評価器
@@ -18,8 +17,9 @@ import com.github.secondarykey.calculator.Token.Value;
  * </pre>
  */
 public class Expression {
-
-	private Token ast;
+	@SuppressWarnings("unused")
+	private static final Logger logger = Logger.getLogger(Expression.class.getName());
+	private Ast ast;
 
 	/**
 	 * コンストラクタ
@@ -32,28 +32,7 @@ public class Expression {
 		//字句解析実行
 		Lexer lex = new Lexer(line);
 		List<Token> tokenList = lex.analysis();
-
-		ast = parse(tokenList);
-	}
-
-
-	/**
-	 * 構文解析
-	 * <pre>
-	 * 字句解析リストから構文解析を行う
-	 * 現状では構文木が２本になる予定はない
-	 * </pre>
-	 */
-	private Token parse(List<Token> values) {
-		Parser parser = new Parser(values);
-		List<Token> rtn = new ArrayList<>();
-		while( parser.hasNext() ) {
-			rtn.add(parser.get(0));
-		}
-		if ( rtn.size() > 1 ) {
-			throw new AstException("現状想定してない構文木の可能性があります。");
-		}
-		return rtn.get(0);
+		ast = AstParser.parse(tokenList);
 	}
 
 	/**
@@ -64,7 +43,23 @@ public class Expression {
 	 * @param arguments プログラミング引数
 	 */
 	public Object eval(Variable arguments) {
-		return expression(ast,arguments);
+
+		List<Token> tokens = ast.get();
+		for ( Token token : tokens ) {
+			
+			Object rtn;
+			try {
+				rtn = expression(token,arguments);
+			} catch (Return e) {
+				return e.get();
+			}
+
+			//TODO どう扱うかを処理する
+			if ( tokens.size() == 1 ) {
+				return rtn;
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -75,142 +70,211 @@ public class Expression {
 	 * @param token 解析対象トークン
 	 * @param args プログラミング引数
 	 */
-	private Object expression(Token token, Variable args) {
+	private Object expression(Token token, Variable args) throws Return {
 
 		Type type = token.getType();
 		String val = token.getValue();
-	
+		
+		//System.out.println(type + ":" + val);
+
 		if ( type == Operator.NOT ) {
 			Object right = expression(token.right(),args);	
-			if ( !(right instanceof Boolean) ) {
-				throw new RuntimeException("Not演算子に対してBooelanじゃない値が入っています");
+			if ( !ClassUtil.isBoolean(right) ) {
+				throw new ExpressionException("Not演算子に対してBooelanじゃない値が入っています");
 			}
 			return !(Boolean)right;
 		}
-		
+
 		if ( type instanceof Value ) {
 			
-			if ( type == Value.STRING ) {
+			if ( type.equals(Value.STRING) ) {
 				return val;
-			} else if ( type == Value.INTEGER ) {
+			} else if ( type.equals(Value.INTEGER) ) {
 				return Integer.parseInt(val);
-			} else if ( type == Value.REAL ) {
+			} else if ( type.equals(Value.REAL) ) {
 				return Double.parseDouble(val);
-			} else if ( type == Value.IDENTIFIER ) {
+			} else if ( type.equals(Value.IDENTIFIER) ) {
+
 				if ( val.equals("null") ) {
 					return null;
 				} else if ( val.equals("true") ) {
 					return true;
 				} else if ( val.equals("false") ) {
 					return false;
+				} else if ( val.equals("return") ) {
+					Token right = token.right();
+					throw new Return(expression(right,args)); 
+				} else if ( val.equals("if") ) {
+					
+					Token right = token.right();
+					Object rtn = expression(right,args);
+					
+					if ( !ClassUtil.isBoolean(rtn) ) {
+						throw new ExpressionException("if文の右辺がBoolean型ではありません。[" + rtn.getClass().getSimpleName() + "]");
+					} else {
+						Boolean e = (Boolean)rtn;
+						if ( e ) {
+							List<Token> blocks = token.getBlocks();
+							for ( Token child : blocks ) {
+								expression(child,args);
+							}
+						}
+						return e;
+					}
 				}
-				throw new RuntimeException("予約語が存在しません[" + val + "]");
-				 
-			} else if ( type == Value.VARIABLE ) {
+				//TODO 変数系がくる
+				//TODO return
+				throw new ExpressionException("予約語が存在しません[" + val + "]");
+			} else if ( type.equals(Value.VARIABLE) ) {
 				return args.get(val);
-			} else if ( type == Value.INVOKER ) {
+			} else if ( type.equals(Value.INVOKER) ) {
+				
+				//TODO 複数引数の対応
 
 				int dot = val.indexOf(".");
 				String valName = val.substring(0, dot);
 				String funcName = val.substring(dot+1);
 			
 				Object valObj = args.get(valName);
-				Class<?> clazz = valObj.getClass();
+	
+				Object[] methodArgs = null;
 				
+				//TODO right ではなくブロックがいいかな、、、
+
 				Token right = token.right();
-				if ( right.getType() == Control.NOPARAM ) {
-					Method method;
-					try {
-						method = clazz.getMethod(funcName);
-						return method.invoke(valObj);
-					} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-						throw new ExpressionException("関数実行例外(引数なし):" + funcName,e);
-					}
-				} else {
-
+				if ( right.getType() != Control.NOPARAM ) {
+					//TODO 現状１つしかオブジェクトを返せない
 					Object arg = expression(right,args);	
-					String className = "";
-					try {
-						Class<? extends Object> argClass = arg.getClass();
-						className = argClass.getSimpleName();
-						Method[] methods = clazz.getMethods();
-						Method method = null;
-						for ( Method wk : methods ) {
-							if ( !wk.getName().equals(funcName) ) {
-								continue;
-							}
-							Class<?>[] types = wk.getParameterTypes();
-							if ( types.length != 1 ) {
-								continue;
-							}
-
-							if ( types[0].isAssignableFrom(argClass) ) {
-								System.out.println(types[0].getName());
-								method = wk;
-							}
-						}
-
-						if ( method == null ) {
-							throw new NoSuchMethodException();
-						}
-						
-						return method.invoke(valObj,arg);
-					} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-						throw new ExpressionException("関数実行例外:" + funcName + ",引数型:" + className,e);
-					}
+					methodArgs = new Object[1];
+					methodArgs[0] = arg;
 				}
+
+				return ClassUtil.call(valObj,funcName,methodArgs);
 			}
 		} else if ( type instanceof Operator ) {
-			
+
 			Object left  = expression(token.left(),args);
 			Object right = expression(token.right(),args);
 
 			Class<? extends Object> clazz = left.getClass();
 			if ( clazz != right.getClass() ) {
+				//右辺と左辺の型が違う
 				throw new RuntimeException("" + clazz.getSimpleName() + " != " + right.getClass().getSimpleName());
 			}
 
-			if ( type == Operator.EQ ) {
-				return left.equals(right);
-			} else if ( type == Operator.NE ) {
-				return !left.equals(right);
-			} else if ( type == Operator.GT ) {
-				if ( clazz == Integer.class ) {
-					return (Integer)left > (Integer)right;
-				} else {
-					return (Double)left > (Double)right;
-				}
-			} else if ( type == Operator.GE ) {
-				if ( clazz == Integer.class ) {
-					return (Integer)left >= (Integer)right;
-				} else {
-					return (Double)left >= (Double)right;
-				}
-			} else if ( type == Operator.LT ) {
-				if ( clazz == Integer.class ) {
-					return (Integer)left < (Integer)right;
-				} else {
-					return (Double)left < (Double)right;
-				}
-			} else if ( type == Operator.LE ) {
-				if ( clazz == Integer.class ) {
-					return (Integer)left <= (Integer)right;
-				} else {
-					return (Double)left <= (Double)right;
-				}
-			} else if ( type == Operator.AND ) {
-				if ( clazz == Boolean.class ) {
-					return (Boolean)left && (Boolean)right;
-				} else {
-				}
-			} else if ( type == Operator.OR ) {
-				if ( clazz == Boolean.class ) {
-					return (Boolean)left || (Boolean)right;
-				}
-			}
+			//評価を行う
+			return operation((Operator)type,left,right);
 		}
 
 		throw new ExpressionException("判定がないタイプです" + type.name());
+	}
+
+
+	/**
+	 * 演算子処理を行う
+	 * @param type
+	 * @param left
+	 * @param right
+	 * @return
+	 */
+	private Object operation(Operator op, Object left, Object right) {
+	
+		if ( op == Operator.EQ ) {
+			return left.equals(right);
+		} else if ( op == Operator.NE ) {
+			return !left.equals(right);
+		} else if ( op.isComparable() ) {
+			//右辺、左辺のチェック
+			if ( ClassUtil.isComparableNumber(left) && 
+					ClassUtil.isComparableNumber(right) ) {
+				@SuppressWarnings("unchecked")
+				boolean rtn = compareToNumber(op,(Comparable<Number>)left,(Number)right);
+				return rtn;
+			}
+			throw new ExpressionException("比較演算子の型がサポートされていません");
+		} else if ( op.isCalc() ) {
+			return calc(op,left,right);
+		} else if ( op.isLogical() ) {
+			if ( ClassUtil.isBoolean(left) && 
+					ClassUtil.isBoolean(right) ) {
+				return logical(op,(Boolean)left,(Boolean)right);
+			}
+			throw new ExpressionException("論理演算子の型がサポートされていません");
+		}
+		throw new ExpressionException("演算子がサポートされていません:" + op);
+	}
+
+	/**
+	 * 計算
+	 * @param op
+	 * @param left
+	 * @param right
+	 * @return
+	 */
+	private Object calc(Operator op, Object left, Object right) {
+		boolean d = true;
+		if ( left instanceof Integer ) {
+			d = false;
+		} else if ( !(left instanceof Double) ) {
+			if ( (left instanceof String) && op.equals(Operator.PLUS) ) {
+				return (String)left + (String)right;
+			}
+			throw new ExpressionException(String.format("%s は計算(%s)をサーポートしていません。",left.getClass().getSimpleName(),op));
+		}
+
+		if ( op.equals(Operator.PLUS) ) {
+			if ( d ) return (Double)left + (Double)right;
+			return (Integer)left + (Integer)right;
+		} else if ( op.equals(Operator.MINUS) ) {
+			if ( d ) return (Double)left - (Double)right;
+			return (Integer)left - (Integer)right;
+		} else if ( op.equals(Operator.MUL) ) {
+			if ( d ) return (Double)left * (Double)right;
+			return (Integer)left * (Integer)right;
+		} else if ( op.equals(Operator.DIV) ) {
+			if ( d ) return (Double)left / (Double)right;
+			return (Integer)left / (Integer)right;
+		} else if ( op.equals(Operator.MOD) ) {
+			if ( d ) return (Double)left % (Double)right;
+			return (Integer)left % (Integer)right;
+		}
+
+		throw new ExpressionException(String.format("計算をサポートしてない演算子(%s)です。",op));
+	}
+
+
+	/**
+	 * 論理演算子の実行
+	 * @param op
+	 * @param left
+	 * @param right
+	 * @return
+	 */
+	private Object logical(Operator op, Boolean left, Boolean right) {
+		if ( Operator.AND.equals(op) ) {
+			return left && right;
+		} else if ( Operator.OR.equals(op) ) {
+			return left || right;
+		} else if ( Operator.NOT.equals(op) ) {
+			// NOT も入るけど、呼び出し関数側ですでにチェックされている
+			return !right;
+		}
+		throw new ExpressionException("想定してない判定:" + op);
+	}
+
+
+	private boolean compareToNumber(Operator op,Comparable<Number> left,Number right) {
+		int rtn = left.compareTo(right);
+		if ( Operator.LT.equals(op) ) {
+			return rtn < 0;
+		} else if ( Operator.LE.equals(op) ) {
+			return rtn <= 0;
+		} else if ( Operator.GT.equals(op) ) {
+			return rtn > 0;
+		} else if ( Operator.GE.equals(op) ) {
+			return rtn >= 0;
+		}
+		throw new ExpressionException("想定してない判定:" + op);
 	}
 
 	/**
@@ -221,23 +285,23 @@ public class Expression {
 		 * 
 		 */
 		private static final long serialVersionUID = 1L;
-
 		public ExpressionException(String string) {
 			super(string);
 		}
-
-		public ExpressionException(String string, Exception e) {
-			super(string,e);
-		}
 	}
 
-	/**
-	 * 構文木例外 
-	 */
-	private class AstException extends RuntimeException {
+	private class Return extends Exception {
+		/**
+		 * 
+		 */
 		private static final long serialVersionUID = 1L;
-		public AstException(String string) {
-			super(string);
+		private Object obj;
+		public Return(Object obj) {
+			this.obj = obj;
+		}
+		public Object get() {
+			return obj;
 		}
 	}
+
 }

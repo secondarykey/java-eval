@@ -2,12 +2,21 @@ package com.github.secondarykey.calculator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 import com.github.secondarykey.calculator.Token.Operator;
 import com.github.secondarykey.calculator.Token.Type;
 import com.github.secondarykey.calculator.Token.Value;
 
+/**
+ * 字句解析木
+ * @author secon
+ *
+ */
 public class Lexer {
+
+	@SuppressWarnings("unused")
+	private static final Logger logger = Logger.getLogger(Lexer.class.getName());
 
 	private String value;
 
@@ -40,15 +49,24 @@ public class Lexer {
 		String buf = skip(value);
 
 		while ( !buf.isEmpty() ) {
+
 			boolean notfound = true;
+
 			for (Type t : types) {
+
             	int index = t.getLastIndex(buf);
+
+           		//TODO 単項演算子(+,-)
+
+            	//存在した場合
             	if ( index != -1 ) {
+
             		int pre = 0;
             		int suf = index;
+
             		if ( t.equals(Value.VARIABLE) ) {
+
             			pre = 1;
-            			
             			int wk = Value.INVOKER.getLastIndex(buf);
             			if ( wk != -1 ) {
             				index = wk;
@@ -60,6 +78,7 @@ public class Lexer {
             			pre = 1;
             			suf = index - 1;
             		} else if ( t.equals(Operator.GT) ) {
+            			// GEと解析を間違う場合がある為、処理を行う
             			int wk = Operator.GE.getLastIndex(buf);
             			if ( wk != -1 ) {
             				index = wk;
@@ -67,6 +86,7 @@ public class Lexer {
             				t = Operator.GE;
             			}
             		} else if ( t.equals(Operator.LT) ) {
+            			// LEと解析を間違う場合がある為、処理を行う
             			int wk = Operator.LE.getLastIndex(buf);
             			if ( wk != -1 ) {
             				index = wk;
@@ -84,10 +104,9 @@ public class Lexer {
             			int wk = Value.REAL.getLastIndex(buf);
             			if ( wk != -1 ) {
             				index = wk;
+            				suf = index;
             				t = Value.REAL;
             			}
-
-
             		}
 
             		String val = buf.substring(pre, suf);
@@ -113,7 +132,11 @@ public class Lexer {
 	private String skip(String buf) {
 		return buf.trim();
 	}	
-	
+
+	/**
+	 * 字句解析例外
+	 * @author secon
+	 */
 	public class LexerException extends RuntimeException {
 		private static final long serialVersionUID = 1L;
 		public LexerException(String string) {
