@@ -31,7 +31,7 @@ public class Expression {
 		//字句解析実行
 		Lexer lex = new Lexer(line);
 		List<Token> tokenList = lex.analysis();
-
+		//構文木生成
 		ast = parse(tokenList);
 	}
 
@@ -49,8 +49,7 @@ public class Expression {
 
 		while( parser.hasNext() ) {
 			Token branch = parser.get(0);
-			System.out.println(branch.getType() );
-			//TODO EOTの渡し方がおかしいかも
+			//EOTの場合追加しない
 			if ( !branch.getType().equals(Control.EOT) ) {
 				rtn.add(branch);
 			}
@@ -66,11 +65,19 @@ public class Expression {
 	 * @param arguments プログラミング引数
 	 */
 	public Object eval(Variable arguments) {
-	
+
+		System.out.println("eval()");
+
 		//TODO 値の伝達ってどうするの？
-		
 		for ( Token token : ast ) {
-			expression(token,arguments);
+			
+			System.out.println(token);
+
+			Object rtn = expression(token,arguments);
+			//TODO どう扱うかを処理する
+			if ( ast.size() == 1 ) {
+				return rtn;
+			}
 		}
 		return null;
 	}
@@ -105,15 +112,32 @@ public class Expression {
 			} else if ( type.equals(Value.REAL) ) {
 				return Double.parseDouble(val);
 			} else if ( type.equals(Value.IDENTIFIER) ) {
-				//TODO 変数系がくる
+
 				if ( val.equals("null") ) {
 					return null;
 				} else if ( val.equals("true") ) {
 					return true;
 				} else if ( val.equals("false") ) {
 					return false;
+				} else if ( val.equals("if") ) {
+					
+					Token right = token.right();
+					Object rtn = expression(right,args);
+					
+					if ( !ClassUtil.isBoolean(rtn) ) {
+						throw new ExpressionException("if文の右辺がBoolean型ではありません。[" + rtn.getClass().getSimpleName() + "]");
+					} else {
+						Boolean e = (Boolean)rtn;
+						if ( e ) {
+							List<Token> blocks = token.getBlocks();
+							for ( Token child : blocks ) {
+								expression(child,args);
+							}
+						}
+						return e;
+					}
 				}
-				
+				//TODO 変数系がくる
 				//TODO return
 				throw new ExpressionException("予約語が存在しません[" + val + "]");
 			} else if ( type.equals(Value.VARIABLE) ) {
@@ -129,6 +153,8 @@ public class Expression {
 				Object valObj = args.get(valName);
 	
 				Object[] methodArgs = null;
+				
+				//TODO right ではなくブロックがいいかな、、、
 
 				Token right = token.right();
 				if ( right.getType() != Control.NOPARAM ) {
@@ -205,7 +231,10 @@ public class Expression {
 		if ( left instanceof Integer ) {
 			d = false;
 		} else if ( !(left instanceof Double) ) {
-			throw new ExpressionException(String.format("%s は計算をサーポートしていません。",left.getClass().getSimpleName()));
+			if ( (left instanceof String) && op.equals(Operator.PLUS) ) {
+				return (String)left + (String)right;
+			}
+			throw new ExpressionException(String.format("%s は計算(%s)をサーポートしていません。",left.getClass().getSimpleName(),op));
 		}
 
 		if ( op.equals(Operator.PLUS) ) {
@@ -277,13 +306,5 @@ public class Expression {
 		}
 	}
 
-	/**
-	 * 構文木例外 
-	 */
-	private class AstException extends RuntimeException {
-		private static final long serialVersionUID = 1L;
-		public AstException(String string) {
-			super(string);
-		}
-	}
+
 }

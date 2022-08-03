@@ -1,5 +1,6 @@
 package com.github.secondarykey.calculator;
 
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -9,9 +10,11 @@ public class Token {
 
 	private Type type;
 	private String value;
-	
+
 	private Token left;
 	private Token right;
+
+	private List<Token> blocks;
 
 	public Token(Type type, String val) {
 		this.type = type;
@@ -203,5 +206,13 @@ public class Token {
 			return -1;
 		}
 
+	}
+
+	public void setBlocks(List<Token> blocks) {
+		this.blocks = blocks;
+	}
+
+	public List<Token> getBlocks() {
+		return blocks;
 	}
 }
