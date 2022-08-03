@@ -13,12 +13,18 @@ import com.github.secondarykey.calculator.Token.Value;
  * <pre>
  * </pre>
  */
-public class Parser {
+public class AstParser {
+	
+	public static Ast parse(List<Token> tokens) {
+		AstParser p = new AstParser();
+		return p.createAst(tokens);
+	}
 
 	private int idx = 0;
 	private List<Token> values;
+	private int limit;
 
-	public Parser() {
+	private AstParser() {
 	}
 
 	/**
@@ -27,20 +33,24 @@ public class Parser {
 	 * 字句解析リストから構文解析を行う
 	 * </pre>
 	 */
-	public List<Token> parse(List<Token> values) {
+	private Ast createAst(List<Token> values) {
 
+		limit = values.size();
 		this.values = new ArrayList<>(values);
 		this.values.add(new Token(Control.EOT,null));
 
 		List<Token> rtn = new ArrayList<>();
+
 		while( hasNext() ) {
 			Token branch = get(0);
+			System.out.println("PARSE:" + branch);
 			//EOTの場合追加しない
-			if ( !branch.isType(Control.EOT) ) {
+			if ( !branch.isType(Control.EOT) && !branch.isType(Operator.CLOSE_BLOCK) ) {
 				rtn.add(branch);
 			}
 		}
-		return rtn;
+		
+		return new Ast(rtn);
 	}
 
 	private boolean hasNext() {
@@ -59,32 +69,30 @@ public class Parser {
 	 * 現在のトークンを取得しインクリメントして終了
 	 * @return 現在のトークン
 	 */
-	private Token nowAndIncrement() {
+	private Token getAndIncrement() {
 		Token rtn = getToken();
 		increment();
 		return rtn;
 	}
 
 	private void increment() {
-		if ( values.size() != idx + 1 ) {
+		if ( values.size() != (idx + 1) ) {
 			++idx;
 		} else {
-			System.out.println("error");
+			limit--;
+			if ( limit == 0 ) {
+				throw new ParseException("Parseエラー:永久ループ解除用");
+			}
 		}
 	}
 
 	private Token get(int priority) {
 		
-		Token n = nowAndIncrement();
-		if ( n.isType(Operator.SEMICOLON) ) {
-			n = nowAndIncrement();
-		}
-
-		if ( n.isType(Control.EOT) ) {
+		Token n = getAndIncrement();
+		Token left = lead(n);
+		if ( n.isType(Control.EOT) || n.isType(Operator.CLOSE_BLOCK) ) {
 			return n;
 		}
-
-		Token left = lead(n);
 
 		Token right = getToken();
 		while ( priority < right.getPriority() ) {
@@ -128,7 +136,7 @@ public class Parser {
 			//呼び出し処理の場合
 			if ( type.equals(Value.INVOKER) ) {
 				//TODO 複数引数の処理
-				Token next = nowAndIncrement();
+				Token next = getAndIncrement();
 				if ( !next.getType().equals(Operator.OPEN) ) {
 					throw new ParseException("関数呼出がカッコから始まっていません。" + next);
 				}
@@ -148,7 +156,7 @@ public class Parser {
 				// if 文の場合
 				if ( val.equals("if") ) {
 
-					Token next = nowAndIncrement();
+					Token next = getAndIncrement();
 					if ( !next.isType(Operator.OPEN) ) {
 						throw new ParseException("if文がカッコから始まっていません。" + val);
 					}
@@ -172,20 +180,18 @@ public class Parser {
 				}
 			}
 			return token;
-		} else if ( type.equals(Operator.OPEN) ) {
-			Token left = get(0);
-			checkClose();
-			return left;
-		} else if ( type.equals(Operator.CLOSE_BLOCK) ) {
-			return token;
 		} else if ( type.equals(Operator.NOT) ) {
 			Token val = get(token.getPriority());
 			token.setRight(val);
 			return token;
+		} else if ( type.equals(Operator.OPEN) ) {
+			Token left = get(0);
+			checkClose();
+			return left;
 		} else if ( type.equals(Operator.SEMICOLON) ) {
-			increment();
-			return token;
-		} else if ( type.equals(Control.EOT) ) {
+			return get(0);
+		} else if ( type.equals(Operator.CLOSE_BLOCK)  ||   
+		            type.equals(Control.EOT) ) {
 			return token;
 		} else {
 			throw new ParseException("lead()時の例外:" + token);
@@ -211,6 +217,7 @@ public class Parser {
 
 		while ( true ) {
 			Token n = get(0);
+			System.out.println("blocks:" + n);
 			if ( n.isType(Operator.CLOSE_BLOCK) ) {
 				break;
 			}
@@ -218,6 +225,7 @@ public class Parser {
 		}
 
 		increment();
+
 		return blocks;
 	}
 

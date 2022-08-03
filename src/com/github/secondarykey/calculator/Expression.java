@@ -17,7 +17,7 @@ import com.github.secondarykey.calculator.util.ClassUtil;
  */
 public class Expression {
 
-	private List<Token> ast;
+	private Ast ast;
 
 	/**
 	 * コンストラクタ
@@ -30,9 +30,7 @@ public class Expression {
 		//字句解析実行
 		Lexer lex = new Lexer(line);
 		List<Token> tokenList = lex.analysis();
-
-		Parser parser = new Parser();
-		ast = parser.parse(tokenList);
+		ast = AstParser.parse(tokenList);
 	}
 
 	/**
@@ -44,9 +42,10 @@ public class Expression {
 	 */
 	public Object eval(Variable arguments) {
 
-		for ( Token token : ast ) {
+		List<Token> tokens = ast.get();
+		for ( Token token : tokens ) {
 			
-			System.out.println("AST:" + token);
+			//System.out.println("AST:" + token);
 
 			Object rtn;
 			try {
@@ -56,7 +55,7 @@ public class Expression {
 			}
 
 			//TODO どう扱うかを処理する
-			if ( ast.size() == 1 ) {
+			if ( tokens.size() == 1 ) {
 				return rtn;
 			}
 		}
