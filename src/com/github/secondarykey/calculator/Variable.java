@@ -15,11 +15,6 @@ public class Variable {
 	private Map<String,Object> values = new HashMap<>();
 
 	/**
-	 * インタプリタ用領域
-	 */
-	private Map<String,Object> box = new HashMap<>();
-
-	/**
 	 * 大域変数追加
 	 * @param name 
 	 * @param object

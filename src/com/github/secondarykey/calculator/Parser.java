@@ -16,17 +16,36 @@ import com.github.secondarykey.calculator.Token.Value;
 public class Parser {
 
 	private int idx = 0;
-
 	private List<Token> values;
 
-	public Parser(List<Token> values) {
-		this.values = new ArrayList<>(values);
-		this.values.add(new Token(Control.EOT,null));
+	public Parser() {
 	}
 
-	public boolean hasNext() {
+	/**
+	 * 構文解析
+	 * <pre>
+	 * 字句解析リストから構文解析を行う
+	 * </pre>
+	 */
+	public List<Token> parse(List<Token> values) {
+
+		this.values = new ArrayList<>(values);
+		this.values.add(new Token(Control.EOT,null));
+
+		List<Token> rtn = new ArrayList<>();
+		while( hasNext() ) {
+			Token branch = get(0);
+			//EOTの場合追加しない
+			if ( !branch.isType(Control.EOT) ) {
+				rtn.add(branch);
+			}
+		}
+		return rtn;
+	}
+
+	private boolean hasNext() {
 		Token token = values.get(idx);
-		if ( token.getType().equals(Control.EOT) ) {
+		if ( token.isType(Control.EOT) ) {
 			return false;
 		}
 		return true;
@@ -36,7 +55,11 @@ public class Parser {
 		return values.get(idx);
 	}
 
-	private Token next() {
+	/**
+	 * 現在のトークンを取得しインクリメントして終了
+	 * @return 現在のトークン
+	 */
+	private Token nowAndIncrement() {
 		Token rtn = getToken();
 		increment();
 		return rtn;
@@ -45,17 +68,24 @@ public class Parser {
 	private void increment() {
 		if ( values.size() != idx + 1 ) {
 			++idx;
+		} else {
+			System.out.println("error");
 		}
 	}
 
-	public Token get(int priority) {
+	private Token get(int priority) {
 		
-		Token n = next();
-		if ( n.getType().equals(Control.EOT) ) {
+		Token n = nowAndIncrement();
+		if ( n.isType(Operator.SEMICOLON) ) {
+			n = nowAndIncrement();
+		}
+
+		if ( n.isType(Control.EOT) ) {
 			return n;
 		}
 
 		Token left = lead(n);
+
 		Token right = getToken();
 		while ( priority < right.getPriority() ) {
 			increment();
@@ -98,13 +128,13 @@ public class Parser {
 			//呼び出し処理の場合
 			if ( type.equals(Value.INVOKER) ) {
 				//TODO 複数引数の処理
-				Token next = next();
+				Token next = nowAndIncrement();
 				if ( !next.getType().equals(Operator.OPEN) ) {
 					throw new ParseException("関数呼出がカッコから始まっていません。" + next);
 				}
 
 				Token close = getToken();
-				if ( !close.getType().equals(Operator.CLOSE) ) {
+				if ( !close.isType(Operator.CLOSE) ) {
 					//TODO 引数を複数解析
 					token.setRight(close);
 					increment();
@@ -117,8 +147,9 @@ public class Parser {
 				String val = token.getValue();
 				// if 文の場合
 				if ( val.equals("if") ) {
-					Token next = next();
-					if ( !next.getType().equals(Operator.OPEN) ) {
+
+					Token next = nowAndIncrement();
+					if ( !next.isType(Operator.OPEN) ) {
 						throw new ParseException("if文がカッコから始まっていません。" + val);
 					}
 		
@@ -131,7 +162,12 @@ public class Parser {
 					Token op = getToken();
 					//中括弧を確認
 					token.setBlocks(blocks(op));
-					increment();
+
+					return token;
+				} else if ( val.equals("return") ) {
+					//内部式を追加
+					Token exp = get(0);
+					token.setRight(exp);
 					return token;
 				}
 			}
@@ -147,8 +183,10 @@ public class Parser {
 			token.setRight(val);
 			return token;
 		} else if ( type.equals(Operator.SEMICOLON) ) {
-			//改行をどうするか？
-			return get(0);
+			increment();
+			return token;
+		} else if ( type.equals(Control.EOT) ) {
+			return token;
 		} else {
 			throw new ParseException("lead()時の例外:" + token);
 		}
@@ -164,30 +202,28 @@ public class Parser {
 	 */
 	private List<Token> blocks(Token op) {
 
-		System.out.println("blocks");
-
-		if ( !op.getType().equals(Operator.OPEN_BLOCK) ) {
+		if ( !op.isType(Operator.OPEN_BLOCK) ) {
 			throw new ParseException("if文のブロックがありません" + op);
 		}
-		
+
 		increment();
 		List<Token> blocks = new ArrayList<>();
 
 		while ( true ) {
 			Token n = get(0);
-			if ( n.getType().equals(Operator.CLOSE_BLOCK) ) {
+			if ( n.isType(Operator.CLOSE_BLOCK) ) {
 				break;
 			}
-
-			System.out.println(n);
 			blocks.add(n);
 		}
+
+		increment();
 		return blocks;
 	}
 
 	private void checkClose() {
 		Token token = getToken();
-		if ( token.getType() != Operator.CLOSE )  {
+		if ( !token.isType(Operator.CLOSE) )  {
 			throw new RuntimeException("閉じカッコがおかしい" + token);
 		}
 		increment();

@@ -1,6 +1,5 @@
 package com.github.secondarykey.calculator;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import com.github.secondarykey.calculator.Token.Control;
@@ -31,30 +30,9 @@ public class Expression {
 		//字句解析実行
 		Lexer lex = new Lexer(line);
 		List<Token> tokenList = lex.analysis();
-		//構文木生成
-		ast = parse(tokenList);
-	}
 
-
-	/**
-	 * 構文解析
-	 * <pre>
-	 * 字句解析リストから構文解析を行う
-	 * </pre>
-	 */
-	private List<Token> parse(List<Token> values) {
-
-		Parser parser = new Parser(values);
-		List<Token> rtn = new ArrayList<>();
-
-		while( parser.hasNext() ) {
-			Token branch = parser.get(0);
-			//EOTの場合追加しない
-			if ( !branch.getType().equals(Control.EOT) ) {
-				rtn.add(branch);
-			}
-		}
-		return rtn;
+		Parser parser = new Parser();
+		ast = parser.parse(tokenList);
 	}
 
 	/**
@@ -66,14 +44,17 @@ public class Expression {
 	 */
 	public Object eval(Variable arguments) {
 
-		System.out.println("eval()");
-
-		//TODO 値の伝達ってどうするの？
 		for ( Token token : ast ) {
 			
-			System.out.println(token);
+			System.out.println("AST:" + token);
 
-			Object rtn = expression(token,arguments);
+			Object rtn;
+			try {
+				rtn = expression(token,arguments);
+			} catch (Return e) {
+				return e.get();
+			}
+
 			//TODO どう扱うかを処理する
 			if ( ast.size() == 1 ) {
 				return rtn;
@@ -90,7 +71,7 @@ public class Expression {
 	 * @param token 解析対象トークン
 	 * @param args プログラミング引数
 	 */
-	private Object expression(Token token, Variable args) {
+	private Object expression(Token token, Variable args) throws Return {
 
 		Type type = token.getType();
 		String val = token.getValue();
@@ -119,6 +100,9 @@ public class Expression {
 					return true;
 				} else if ( val.equals("false") ) {
 					return false;
+				} else if ( val.equals("return") ) {
+					Token right = token.right();
+					throw new Return(expression(right,args)); 
 				} else if ( val.equals("if") ) {
 					
 					Token right = token.right();
@@ -300,11 +284,23 @@ public class Expression {
 		 * 
 		 */
 		private static final long serialVersionUID = 1L;
-
 		public ExpressionException(String string) {
 			super(string);
 		}
 	}
 
+	private class Return extends Exception {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+		private Object obj;
+		public Return(Object obj) {
+			this.obj = obj;
+		}
+		public Object get() {
+			return obj;
+		}
+	}
 
 }

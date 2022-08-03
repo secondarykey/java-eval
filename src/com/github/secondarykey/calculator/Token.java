@@ -208,6 +208,10 @@ public class Token {
 
 	}
 
+	public boolean isType(Type type) {
+		return type.equals(this.type);
+	}
+
 	public void setBlocks(List<Token> blocks) {
 		this.blocks = blocks;
 	}

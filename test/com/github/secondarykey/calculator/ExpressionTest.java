@@ -153,4 +153,15 @@ class ExpressionTest {
 		assertNull(rtn);
 	}
 
+	@Test
+	void testReturn() {
+		Expression ret1 = new Expression("return \"test\"");
+		assertEquals((String)ret1.eval(null),"test");
+		Expression ret2 = new Expression("return true");
+		assertTrue((Boolean)ret2.eval(null));
+		Expression ret3 = new Expression("return false");
+		assertFalse((Boolean)ret3.eval(null));
+		Expression ret4 = new Expression("return 1+2");
+		assertEquals((Integer)ret4.eval(null),3);
+	}	
 }
