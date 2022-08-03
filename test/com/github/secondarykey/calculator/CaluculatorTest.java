@@ -4,6 +4,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Formatter;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 import org.junit.jupiter.api.Test;
 
@@ -11,7 +16,6 @@ class CaluculatorTest {
 
 	@Test
 	void testIF() {
-
 		//変数値
 		Variable var = new Variable();
 		List<String> rtn = new ArrayList<>();

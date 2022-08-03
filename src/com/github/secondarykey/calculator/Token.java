@@ -219,4 +219,11 @@ public class Token {
 	public List<Token> getBlocks() {
 		return blocks;
 	}
+
+	public boolean isNoneRight() {
+		if ( blocks != null ) {
+			return true;
+		}
+		return false;
+	}
 }

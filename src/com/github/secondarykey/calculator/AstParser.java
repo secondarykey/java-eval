@@ -2,6 +2,8 @@ package com.github.secondarykey.calculator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.github.secondarykey.calculator.Token.Control;
 import com.github.secondarykey.calculator.Token.Operator;
@@ -15,7 +17,18 @@ import com.github.secondarykey.calculator.Token.Value;
  */
 public class AstParser {
 	
+	@SuppressWarnings("unused")
+	public static final Logger logger = Logger.getLogger(AstParser.class.getName());
+	
+	static {
+        logger.setLevel(Level.WARNING);
+        System.setProperty("java.util.logging.SimpleFormatter.format",
+               "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS.%1$tL %4$s %2$s %5$s%6$s%n");
+	}
+	
 	public static Ast parse(List<Token> tokens) {
+		logger.info(logger.getLevel().toString());
+		logger.info("--------------------------- Parse");
 		AstParser p = new AstParser();
 		return p.createAst(tokens);
 	}
@@ -36,16 +49,25 @@ public class AstParser {
 	private Ast createAst(List<Token> values) {
 
 		limit = values.size();
+
+		logger.info("トークンサイズ"+limit);
+		for ( Token token : values ) {
+			logger.info(token.getValue());
+		}
+
 		this.values = new ArrayList<>(values);
 		this.values.add(new Token(Control.EOT,null));
 
 		List<Token> rtn = new ArrayList<>();
 
 		while( hasNext() ) {
-			Token branch = get(0);
-			System.out.println("PARSE:" + branch);
+			logger.info("Parser loop get()");
+			Token branch = get(0,0);
+
+			logger.info("PARSE BRANCH TOKEN:" + branch);
 			//EOTの場合追加しない
-			if ( !branch.isType(Control.EOT) && !branch.isType(Operator.CLOSE_BLOCK) ) {
+			if ( !branch.isType(Control.EOT) && !branch.isType(Operator.CLOSE_BLOCK) &&
+			     !branch.isType(Operator.SEMICOLON) ) {
 				rtn.add(branch);
 			}
 		}
@@ -54,6 +76,7 @@ public class AstParser {
 	}
 
 	private boolean hasNext() {
+		logger.info("hasNext():" + idx);
 		Token token = values.get(idx);
 		if ( token.isType(Control.EOT) ) {
 			return false;
@@ -76,6 +99,7 @@ public class AstParser {
 	}
 
 	private void increment() {
+		logger.info("increment():" + idx);
 		if ( values.size() != (idx + 1) ) {
 			++idx;
 		} else {
@@ -86,18 +110,37 @@ public class AstParser {
 		}
 	}
 
-	private Token get(int priority) {
+	/**
+	 * 要素の取得
+	 * @param priority
+	 * @return
+	 */
+	private Token get(int priority,int depth) {
 		
+		logger.info(":" + depth);
+
 		Token n = getAndIncrement();
-		Token left = lead(n);
-		if ( n.isType(Control.EOT) || n.isType(Operator.CLOSE_BLOCK) ) {
+		logger.info("Token:" + n);
+		if ( n.isType(Control.EOT) ) {
 			return n;
+		}
+		if ( n.isType(Operator.CLOSE_BLOCK) ) {
+			return n;
+		}
+		if ( n.isType(Operator.SEMICOLON) ) {
+			return n;
+		}
+
+		Token left = lead(n,depth);
+		//右辺がいらないパターンの場合
+		if ( left.isNoneRight() ) {
+			return left;
 		}
 
 		Token right = getToken();
 		while ( priority < right.getPriority() ) {
 			increment();
-			left = bind(left,right);
+			left = bind(left,right,depth);
 			right = getToken();
 		}
 		return left;
@@ -112,12 +155,12 @@ public class AstParser {
 	 * @param right
 	 * @return
 	 */
-	private Token bind(Token left, Token right) {
+	private Token bind(Token left, Token right,int depth) {
 	
 		if ( right.getType() instanceof Operator ) {
 			right.setLeft(left);
 			int priority = right.getPriority();
-			right.setRight(get(priority-1));
+			right.setRight(get(priority-1,depth));
 			return right;
 		} else {
 			throw new ParseException("オペレーター以外でのバインドが存在:" + right);
@@ -129,7 +172,10 @@ public class AstParser {
 	 * @param token 対象トークン
 	 * @return トークンを返す
 	 */
-	private Token lead(Token token) {
+	private Token lead(Token token,int depth) {
+	
+		logger.info(depth + ":" + token);
+		
 		Type type = token.getType();
 
 		if ( type instanceof Value ) {
@@ -161,37 +207,39 @@ public class AstParser {
 						throw new ParseException("if文がカッコから始まっていません。" + val);
 					}
 		
-					//内部式を追加
-					Token exp = get(0);
-
+					//内部式を右辺に設定しておく
+					Token exp = lead(next,depth);
 					token.setRight(exp);
-					increment();
 
 					Token op = getToken();
 					//中括弧を確認
-					token.setBlocks(blocks(op));
+					token.setBlocks(blocks(op,depth));
 
+					logger.info(depth + ":return " + token);
+					//if文を返す
 					return token;
+
 				} else if ( val.equals("return") ) {
 					//内部式を追加
-					Token exp = get(0);
+					Token exp = get(0,depth);
 					token.setRight(exp);
 					return token;
 				}
 			}
 			return token;
 		} else if ( type.equals(Operator.NOT) ) {
-			Token val = get(token.getPriority());
+			Token val = get(token.getPriority(),depth);
 			token.setRight(val);
 			return token;
 		} else if ( type.equals(Operator.OPEN) ) {
-			Token left = get(0);
+			Token left = get(0,depth);
 			checkClose();
 			return left;
 		} else if ( type.equals(Operator.SEMICOLON) ) {
-			return get(0);
+			return token;
 		} else if ( type.equals(Operator.CLOSE_BLOCK)  ||   
 		            type.equals(Control.EOT) ) {
+			logger.info("Controller:" + token);
 			return token;
 		} else {
 			throw new ParseException("lead()時の例外:" + token);
@@ -206,7 +254,9 @@ public class AstParser {
 	 * @param op 開始位置
 	 * @return 内部のTokenリスト
 	 */
-	private List<Token> blocks(Token op) {
+	private List<Token> blocks(Token op,int depth) {
+		
+		logger.info("blocks()");
 
 		if ( !op.isType(Operator.OPEN_BLOCK) ) {
 			throw new ParseException("if文のブロックがありません" + op);
@@ -216,16 +266,16 @@ public class AstParser {
 		List<Token> blocks = new ArrayList<>();
 
 		while ( true ) {
-			Token n = get(0);
-			System.out.println("blocks:" + n);
+			Token n = get(0,depth + 1);
+			logger.info("block:" + n);
 			if ( n.isType(Operator.CLOSE_BLOCK) ) {
 				break;
 			}
+			increment();
 			blocks.add(n);
 		}
 
-		increment();
-
+		logger.info("block End");
 		return blocks;
 	}
 

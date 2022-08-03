@@ -1,6 +1,7 @@
 package com.github.secondarykey.calculator;
 
 import java.util.List;
+import java.util.logging.Logger;
 
 import com.github.secondarykey.calculator.Token.Control;
 import com.github.secondarykey.calculator.Token.Operator;
@@ -16,7 +17,8 @@ import com.github.secondarykey.calculator.util.ClassUtil;
  * </pre>
  */
 public class Expression {
-
+	@SuppressWarnings("unused")
+	private static final Logger logger = Logger.getLogger(Expression.class.getName());
 	private Ast ast;
 
 	/**
@@ -45,8 +47,6 @@ public class Expression {
 		List<Token> tokens = ast.get();
 		for ( Token token : tokens ) {
 			
-			//System.out.println("AST:" + token);
-
 			Object rtn;
 			try {
 				rtn = expression(token,arguments);
@@ -74,6 +74,8 @@ public class Expression {
 
 		Type type = token.getType();
 		String val = token.getValue();
+		
+		//System.out.println(type + ":" + val);
 
 		if ( type == Operator.NOT ) {
 			Object right = expression(token.right(),args);	
@@ -150,7 +152,7 @@ public class Expression {
 				return ClassUtil.call(valObj,funcName,methodArgs);
 			}
 		} else if ( type instanceof Operator ) {
-			
+
 			Object left  = expression(token.left(),args);
 			Object right = expression(token.right(),args);
 

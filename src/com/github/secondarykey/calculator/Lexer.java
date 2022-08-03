@@ -2,6 +2,7 @@ package com.github.secondarykey.calculator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 import com.github.secondarykey.calculator.Token.Operator;
 import com.github.secondarykey.calculator.Token.Type;
@@ -13,6 +14,9 @@ import com.github.secondarykey.calculator.Token.Value;
  *
  */
 public class Lexer {
+
+	@SuppressWarnings("unused")
+	private static final Logger logger = Logger.getLogger(Lexer.class.getName());
 
 	private String value;
 

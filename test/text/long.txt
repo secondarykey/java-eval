@@ -1,10 +1,13 @@
 $list.add("test1");
 $list.add("test2");
 
+$list.size();
+
 if ( $flag ) {
   $list.add("test3");
 }
 
+$list.size();
 
 $list.add("test4");
 $list.add("test5");
