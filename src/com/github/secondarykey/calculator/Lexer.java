@@ -107,6 +107,13 @@ public class Lexer {
             				suf = index;
             				t = Value.REAL;
             			}
+            		} else if ( t.equals(Operator.ASSIGN) ) {
+            			int wk = Operator.EQ.getLastIndex(buf);
+            			if ( wk != -1 ) {
+            				index = wk;
+            				suf = index;
+            				t = Operator.EQ;
+            			}
             		}
 
             		String val = buf.substring(pre, suf);

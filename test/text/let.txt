@@ -1,0 +1,7 @@
+let test = "test";
+
+if ( $var.equals(test) ) {
+  return 1;
+}
+
+return 0;

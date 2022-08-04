@@ -14,6 +14,7 @@ public class Variable {
 	 */
 	private Map<String,Object> values = new HashMap<>();
 
+	private Map<String,Object> local = new HashMap<>();
 	/**
 	 * 大域変数追加
 	 * @param name 
@@ -29,5 +30,13 @@ public class Variable {
 
 	public Set<String> getDefineList() {
 		return values.keySet();
+	}
+
+	public void addLocal(String value, Object expression) {
+		local.put(value,expression);
+	}
+
+	public Object getLocal(String name) {
+		return local.get(name);
 	}
 }

@@ -70,15 +70,15 @@ public class Expression {
 	 * @param token 解析対象トークン
 	 * @param args プログラミング引数
 	 */
-	private Object expression(Token token, Variable args) throws Return {
+	private Object expression(Token token, Variable var) throws Return {
 
 		Type type = token.getType();
 		String val = token.getValue();
 		
-		//System.out.println(type + ":" + val);
+		System.out.println(type + ":" + val);
 
 		if ( type == Operator.NOT ) {
-			Object right = expression(token.right(),args);	
+			Object right = expression(token.right(),var);	
 			if ( !ClassUtil.isBoolean(right) ) {
 				throw new ExpressionException("Not演算子に対してBooelanじゃない値が入っています");
 			}
@@ -103,11 +103,11 @@ public class Expression {
 					return false;
 				} else if ( val.equals("return") ) {
 					Token right = token.right();
-					throw new Return(expression(right,args)); 
+					throw new Return(expression(right,var)); 
 				} else if ( val.equals("if") ) {
 					
 					Token right = token.right();
-					Object rtn = expression(right,args);
+					Object rtn = expression(right,var);
 					
 					if ( !ClassUtil.isBoolean(rtn) ) {
 						throw new ExpressionException("if文の右辺がBoolean型ではありません。[" + rtn.getClass().getSimpleName() + "]");
@@ -116,17 +116,27 @@ public class Expression {
 						if ( e ) {
 							List<Token> blocks = token.getBlocks();
 							for ( Token child : blocks ) {
-								expression(child,args);
+								expression(child,var);
 							}
 						}
 						return e;
 					}
+				} else if ( val.equals("let") ) {
+					Token name = token.right();
+					Token v = name.right();
+					//宣言の追加
+					var.addLocal(name.getValue(),expression(v,var));
+					return null;
 				}
-				//TODO 変数系がくる
-				//TODO return
+			
+				Object obj = var.getLocal(val);
+				if ( obj != null ) {
+					return obj;
+				}
+				
 				throw new ExpressionException("予約語が存在しません[" + val + "]");
 			} else if ( type.equals(Value.VARIABLE) ) {
-				return args.get(val);
+				return var.get(val);
 			} else if ( type.equals(Value.INVOKER) ) {
 				
 				//TODO 複数引数の対応
@@ -135,7 +145,7 @@ public class Expression {
 				String valName = val.substring(0, dot);
 				String funcName = val.substring(dot+1);
 			
-				Object valObj = args.get(valName);
+				Object valObj = var.get(valName);
 	
 				Object[] methodArgs = null;
 				
@@ -144,7 +154,7 @@ public class Expression {
 				Token right = token.right();
 				if ( right.getType() != Control.NOPARAM ) {
 					//TODO 現状１つしかオブジェクトを返せない
-					Object arg = expression(right,args);	
+					Object arg = expression(right,var);	
 					methodArgs = new Object[1];
 					methodArgs[0] = arg;
 				}
@@ -153,8 +163,8 @@ public class Expression {
 			}
 		} else if ( type instanceof Operator ) {
 
-			Object left  = expression(token.left(),args);
-			Object right = expression(token.right(),args);
+			Object left  = expression(token.left(),var);
+			Object right = expression(token.right(),var);
 
 			Class<? extends Object> clazz = left.getClass();
 			if ( clazz != right.getClass() ) {

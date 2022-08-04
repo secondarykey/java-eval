@@ -4,11 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Formatter;
-import java.util.logging.Handler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 import org.junit.jupiter.api.Test;
 
@@ -56,5 +51,23 @@ class CaluculatorTest {
 		
 		rtn = cal.eval(code);
 		assertEquals(rtn,"NG");
+	}
+	
+	@Test 
+	void testLet() {
+
+		Variable var = new Variable();
+		var.add("var", "sample");
+
+		Caluculator cal = Caluculator.create(var);
+
+		String code = TestUtil.get("/text/let.txt");
+		Object rtn = cal.eval(code);
+		assertEquals(rtn,0);
+	
+		var.add("var","test");
+		
+		rtn = cal.eval(code);
+		assertEquals(rtn,1);
 	}
 }
