@@ -3,7 +3,6 @@ package com.github.secondarykey.calculator;
 import java.util.List;
 import java.util.logging.Logger;
 
-import com.github.secondarykey.calculator.Token.Control;
 import com.github.secondarykey.calculator.Token.Operator;
 import com.github.secondarykey.calculator.Token.Type;
 import com.github.secondarykey.calculator.Token.Value;
@@ -128,13 +127,15 @@ public class Expression {
 					var.addLocal(name.getValue(),expression(v,var));
 					return null;
 				}
-			
+
+				//TODO もう少し考える
 				Object obj = var.getLocal(val);
 				if ( obj != null ) {
 					return obj;
 				}
-				
-				throw new ExpressionException("予約語が存在しません[" + val + "]");
+	
+				throw new ExpressionException("予約語、変数が存在しません[" + val + "]");
+
 			} else if ( type.equals(Value.VARIABLE) ) {
 				return var.get(val);
 			} else if ( type.equals(Value.INVOKER) ) {
@@ -144,21 +145,24 @@ public class Expression {
 				int dot = val.indexOf(".");
 				String valName = val.substring(0, dot);
 				String funcName = val.substring(dot+1);
-			
-				Object valObj = var.get(valName);
-	
-				Object[] methodArgs = null;
-				
-				//TODO right ではなくブロックがいいかな、、、
 
-				Token right = token.right();
-				if ( right.getType() != Control.NOPARAM ) {
-					//TODO 現状１つしかオブジェクトを返せない
-					Object arg = expression(right,var);	
-					methodArgs = new Object[1];
-					methodArgs[0] = arg;
+				Object valObj = var.get(valName);
+				if ( valObj == null ) {
+					//TODO Lexerで別の値にローカルかを判定しておく
+					valObj = var.getLocal(valName);
 				}
 
+				Object[] methodArgs = null;
+
+				//TODO right ではなくブロックがいいかな、、、
+				List<Token> args = token.getBlocks();
+				methodArgs = new Object[args.size()];
+				int idx = 0;
+				for ( Token arg : args ) {
+					Object ans = expression(arg,var);	
+					methodArgs[idx] = ans;
+					idx++;
+				}
 				return ClassUtil.call(valObj,funcName,methodArgs);
 			}
 		} else if ( type instanceof Operator ) {

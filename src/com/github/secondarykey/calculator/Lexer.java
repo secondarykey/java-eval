@@ -67,9 +67,11 @@ public class Lexer {
             		if ( t.equals(Value.VARIABLE) ) {
 
             			pre = 1;
-            			int wk = Value.INVOKER.getLastIndex(buf);
+            			//関数判定は$抜き
+            			int wk = Value.INVOKER.getLastIndex(buf.substring(1));
             			if ( wk != -1 ) {
-            				index = wk;
+            				//抜いた分追加
+            				index = wk+1;
             				suf = index;
             				t = Value.INVOKER;
             			}
@@ -114,6 +116,14 @@ public class Lexer {
             				suf = index;
             				t = Operator.EQ;
             			}
+            		} else if ( t.equals(Value.IDENTIFIER) ) {
+            			int wk = Value.INVOKER.getLastIndex(buf);
+            			if ( wk != -1 ) {
+            				//抜いた分追加
+            				index = wk;
+            				suf = index;
+            				t = Value.INVOKER;
+            			}
             		}
 
             		String val = buf.substring(pre, suf);
@@ -125,7 +135,7 @@ public class Lexer {
             		break;
             	}
         	}
-			
+
 			buf = skip(buf);
 			if ( notfound ) {
 				throw new LexerException("[" + buf  + "]");

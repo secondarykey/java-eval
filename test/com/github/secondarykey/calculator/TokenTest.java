@@ -11,7 +11,10 @@ class TokenTest {
 	@Test
 	void testValue() {
 		
-		assertEquals(Value.INVOKER.getLastIndex("$test.index()"),11);
+		assertEquals(Value.INVOKER.getLastIndex("test.index();test"),10);
+		assertEquals(Value.INVOKER.getLastIndex("test.index(\"test\")"),10);
+		assertEquals(Value.INVOKER.getLastIndex("test.index(test)"),10);
+		assertEquals(Value.INVOKER.getLastIndex("test.index(\"test\",test)"),10);
 	}
 
 }

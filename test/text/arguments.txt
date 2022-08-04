@@ -1,0 +1,2 @@
+let text = $var;
+return text.substring(2,5);

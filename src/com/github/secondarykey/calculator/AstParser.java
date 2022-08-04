@@ -179,20 +179,16 @@ public class AstParser {
 		if ( type instanceof Value ) {
 			//呼び出し処理の場合
 			if ( type.equals(Value.INVOKER) ) {
+
 				//TODO 複数引数の処理
 				Token next = getAndIncrement();
-				if ( !next.getType().equals(Operator.OPEN) ) {
+				if ( !next.isType(Operator.OPEN) ) {
 					throw new ParseException("関数呼出がカッコから始まっていません。" + next);
 				}
 
-				Token close = getToken();
-				if ( !close.isType(Operator.CLOSE) ) {
-					//TODO 引数を複数解析
-					token.setRight(close);
-					increment();
-				} else {
-					token.setRight(new Token(Control.NOPARAM,null));
-				}
+				Token args = getToken();
+				token.setBlocks(arguments(args));
+				
 				increment();
 				return token;
 			} else if ( type.equals(Value.IDENTIFIER) ) {
@@ -203,12 +199,17 @@ public class AstParser {
 
 					Token next = getAndIncrement();
 					if ( !next.isType(Operator.OPEN) ) {
-						throw new ParseException("if文がカッコから始まっていません。" + val);
+						throw new ParseException("if文がカッコから始まっていません。" + next);
 					}
 		
 					//内部式を右辺に設定しておく
-					Token exp = lead(next);
+					Token exp = get(0);
 					token.setRight(exp);
+	
+					Token close = getAndIncrement();
+					if ( !close.isType(Operator.CLOSE) ) {
+						throw new ParseException("if文が閉じられていません。" + close);
+					}
 
 					Token op = getToken();
 					//中括弧を確認
@@ -224,7 +225,8 @@ public class AstParser {
 					token.setRight(exp);
 					return token;
 				} else if ( val.equals("let") ) {
-			
+		
+					//名称を設定しておく
 					Token name = getToken();
 					token.setRight(name);
 
@@ -240,6 +242,7 @@ public class AstParser {
 					//右辺を設定して終了
 					Token right = get(0);
 					name.setRight(right);
+
 					return token;
 				}
 			}
@@ -261,6 +264,33 @@ public class AstParser {
 		} else {
 			throw new ParseException("lead()時の例外:" + token);
 		}
+	}
+
+	/**
+	 * 関数用の引数を作成
+	 * @param args 先頭のトークン
+	 * @return
+	 */
+	private List<Token> arguments(Token args) {
+
+		List<Token> tokens = new ArrayList<>();
+		if ( args.isType(Operator.CLOSE) ) {
+			return tokens;
+		}
+
+		Token target = args;
+		while ( true ) {
+			Token work = getToken();
+			if ( work.isType(Operator.COMMA) || work.isType(Operator.CLOSE) ) {
+				tokens.add(target);
+				if ( work.isType(Operator.CLOSE) ) {
+					break;
+				}
+			}
+			target = work;
+			increment();
+		}
+		return tokens;
 	}
 
 	/**
