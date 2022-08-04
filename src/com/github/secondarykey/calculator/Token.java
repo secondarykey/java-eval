@@ -5,6 +5,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
+ * トークン用のオブジェクト
  */
 public class Token {
 
@@ -104,6 +105,8 @@ public class Token {
 		MUL("*",80),
 		DIV("/",80),
 		MOD("%",80),
+
+		ASSIGN("=",50),
 
 		OPEN("(",100),
 		CLOSE(")",0),

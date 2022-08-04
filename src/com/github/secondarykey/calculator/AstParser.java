@@ -21,7 +21,7 @@ public class AstParser {
 	public static final Logger logger = Logger.getLogger(AstParser.class.getName());
 	
 	static {
-        logger.setLevel(Level.WARNING);
+        logger.setLevel(Level.INFO);
         System.setProperty("java.util.logging.SimpleFormatter.format",
                "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS.%1$tL %4$s %2$s %5$s%6$s%n");
 	}
@@ -62,7 +62,7 @@ public class AstParser {
 
 		while( hasNext() ) {
 			logger.info("Parser loop get()");
-			Token branch = get(0,0);
+			Token branch = get(0);
 
 			logger.info("PARSE BRANCH TOKEN:" + branch);
 			//EOTの場合追加しない
@@ -115,9 +115,7 @@ public class AstParser {
 	 * @param priority
 	 * @return
 	 */
-	private Token get(int priority,int depth) {
-		
-		logger.info(":" + depth);
+	private Token get(int priority) {
 
 		Token n = getAndIncrement();
 		logger.info("Token:" + n);
@@ -131,7 +129,7 @@ public class AstParser {
 			return n;
 		}
 
-		Token left = lead(n,depth);
+		Token left = lead(n);
 		//右辺がいらないパターンの場合
 		if ( left.isNoneRight() ) {
 			return left;
@@ -140,7 +138,7 @@ public class AstParser {
 		Token right = getToken();
 		while ( priority < right.getPriority() ) {
 			increment();
-			left = bind(left,right,depth);
+			left = bind(left,right);
 			right = getToken();
 		}
 		return left;
@@ -155,12 +153,12 @@ public class AstParser {
 	 * @param right
 	 * @return
 	 */
-	private Token bind(Token left, Token right,int depth) {
+	private Token bind(Token left, Token right ) {
 	
 		if ( right.getType() instanceof Operator ) {
 			right.setLeft(left);
 			int priority = right.getPriority();
-			right.setRight(get(priority-1,depth));
+			right.setRight(get(priority-1));
 			return right;
 		} else {
 			throw new ParseException("オペレーター以外でのバインドが存在:" + right);
@@ -172,9 +170,9 @@ public class AstParser {
 	 * @param token 対象トークン
 	 * @return トークンを返す
 	 */
-	private Token lead(Token token,int depth) {
+	private Token lead(Token token) {
 	
-		logger.info(depth + ":" + token);
+		logger.info(token.toString());
 		
 		Type type = token.getType();
 
@@ -198,6 +196,7 @@ public class AstParser {
 				increment();
 				return token;
 			} else if ( type.equals(Value.IDENTIFIER) ) {
+
 				String val = token.getValue();
 				// if 文の場合
 				if ( val.equals("if") ) {
@@ -208,31 +207,49 @@ public class AstParser {
 					}
 		
 					//内部式を右辺に設定しておく
-					Token exp = lead(next,depth);
+					Token exp = lead(next);
 					token.setRight(exp);
 
 					Token op = getToken();
 					//中括弧を確認
-					token.setBlocks(blocks(op,depth));
+					token.setBlocks(blocks(op));
 
-					logger.info(depth + ":return " + token);
+					logger.info("return " + token);
 					//if文を返す
 					return token;
 
 				} else if ( val.equals("return") ) {
 					//内部式を追加
-					Token exp = get(0,depth);
+					Token exp = get(0);
 					token.setRight(exp);
+					return token;
+				} else if ( val.equals("let") ) {
+			
+					Token name = getToken();
+					token.setRight(name);
+
+					//次がアサイン
+					increment();
+
+					Token assign = getToken();
+					if ( !assign.isType(Operator.ASSIGN) ) {
+						throw new ParseException("let式に代入(=)が存在しません。");
+					}
+
+					increment();
+					//右辺を設定して終了
+					Token right = get(0);
+					name.setRight(right);
 					return token;
 				}
 			}
 			return token;
 		} else if ( type.equals(Operator.NOT) ) {
-			Token val = get(token.getPriority(),depth);
+			Token val = get(token.getPriority());
 			token.setRight(val);
 			return token;
 		} else if ( type.equals(Operator.OPEN) ) {
-			Token left = get(0,depth);
+			Token left = get(0);
 			checkClose();
 			return left;
 		} else if ( type.equals(Operator.SEMICOLON) ) {
@@ -254,7 +271,7 @@ public class AstParser {
 	 * @param op 開始位置
 	 * @return 内部のTokenリスト
 	 */
-	private List<Token> blocks(Token op,int depth) {
+	private List<Token> blocks(Token op) {
 		
 		logger.info("blocks()");
 
@@ -266,7 +283,7 @@ public class AstParser {
 		List<Token> blocks = new ArrayList<>();
 
 		while ( true ) {
-			Token n = get(0,depth + 1);
+			Token n = get(0);
 			logger.info("block:" + n);
 			if ( n.isType(Operator.CLOSE_BLOCK) ) {
 				break;
