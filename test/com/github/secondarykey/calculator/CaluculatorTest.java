@@ -70,4 +70,15 @@ class CaluculatorTest {
 		rtn = cal.eval(code);
 		assertEquals(rtn,1);
 	}
+
+	@Test 
+	void testArguments() {
+		Variable var = new Variable();
+		var.add("var", "abcdefghijk");
+		Caluculator cal = Caluculator.create(var);
+		String code = TestUtil.get("/text/arguments.txt");
+		Object rtn = cal.eval(code);
+		assertEquals(rtn,"cde");
+	}
+	
 }

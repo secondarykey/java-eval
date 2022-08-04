@@ -32,8 +32,8 @@ public class Variable {
 		return values.keySet();
 	}
 
-	public void addLocal(String value, Object expression) {
-		local.put(value,expression);
+	public void addLocal(String name, Object val) {
+		local.put(name,val);
 	}
 
 	public Object getLocal(String name) {

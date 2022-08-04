@@ -23,6 +23,9 @@ public class ClassUtil {
 
 		Class<?> clazz = target.getClass();
 		Class<?>[] argsClazz = null;
+		
+		System.out.println("Class:" + target.getClass().getSimpleName());
+		System.out.println("Method:" + name);
 
 		//引数指定がある場合引数のクラス群を設定
 		if ( args != null ) {
@@ -34,8 +37,11 @@ public class ClassUtil {
 					throw new RuntimeException("Nullを許容していません");
 				}
 				argsClazz[idx] = arg.getClass();
+				System.out.println(idx + ":" + arg.getClass().getSimpleName());
 				idx++;
 			}
+		} else {
+			System.out.println("引数なし");
 		}
 
 		Method method = null;
@@ -45,6 +51,7 @@ public class ClassUtil {
 			if ( !m.getName().equals(name) ) {
 				continue;
 			}
+
 			Class<?>[] types = m.getParameterTypes();
 			if ( argsClazz == null ) {
 				if ( types != null && types.length != 0 ) {
@@ -61,23 +68,25 @@ public class ClassUtil {
 			boolean ok = true;
 			int idx = 0;
 
-
 			for ( Class<?> type : types ) {
+				
+				System.out.println(idx + ":" + type.getSimpleName());
+				System.out.println(idx + ":" + argsClazz[idx].getSimpleName());
+
 				//型が派生関係にあるかを確認
-				if ( !type.isAssignableFrom(argsClazz[idx]) ) {
+				if ( !same(type,argsClazz[idx]) ) {
+					
 					ok = false;
 					break;
 				}
 				idx++;
 			}
-			
 
 			if ( ok ) {
 				method = m;
 				break;
 			}
 		}
-		
 
 		try {
 			if ( method == null ) {
@@ -92,6 +101,105 @@ public class ClassUtil {
 		}
 	}
 
+	private static boolean same(Class<?> clazz1, Class<?> clazz2) {
+		if( clazz1.equals(clazz2) ) {
+			return true;
+		} else if( isWrap(clazz1,clazz2) ) {
+			return true;
+		} else if( clazz1.isAssignableFrom(clazz2) ) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * プリミティブを比較
+	 * @param clazz1
+	 * @param clazz2
+	 * @return
+	 */
+	private static boolean isWrap(Class<?> clazz1, Class<?> clazz2) {
+		if ( isInteger(clazz1) ) {
+			if ( isInteger(clazz2) ) return true;
+			return false;
+		} else if ( isDouble(clazz1) ) {
+			if ( isDouble(clazz2) ) return true;
+			return false;
+		} else if ( isByte(clazz1) ) {
+			if ( isByte(clazz2) ) return true;
+			return false;
+		} else if ( isLong(clazz1) ) {
+			if ( isLong(clazz2) ) return true;
+			return false;
+		} else if ( isShort(clazz1) ) {
+			if ( isShort(clazz2) ) return true;
+			return false;
+		} else if ( isFloat(clazz1) ) {
+			if ( isFloat(clazz2) ) return true;
+			return false;
+		} else if ( isChar(clazz1) ) {
+			if ( isChar(clazz2) ) return true;
+			return false;
+		}
+		return false;
+	}
+	
+	public static Boolean isInteger(Class<?> clazz) {
+		if ( clazz == int.class ) {
+			return true;
+		} else if ( clazz == Integer.class ) {
+			return true;
+		}
+		return false;
+	}
+	public static Boolean isDouble(Class<?> clazz) {
+		if ( clazz == double.class ) {
+			return true;
+		} else if ( clazz == Double.class ) {
+			return true;
+		}
+		return false;
+	}
+	public static Boolean isByte(Class<?> clazz) {
+		if ( clazz == byte.class ) {
+			return true;
+		} else if ( clazz == Byte.class ) {
+			return true;
+		}
+		return false;
+	}
+	public static Boolean isShort(Class<?> clazz) {
+		if ( clazz == short.class ) {
+			return true;
+		} else if ( clazz == Short.class ) {
+			return true;
+		}
+		return false;
+	}
+	public static Boolean isLong(Class<?> clazz) {
+		if ( clazz == long.class ) {
+			return true;
+		} else if ( clazz == Long.class ) {
+			return true;
+		}
+		return false;
+	}
+	public static Boolean isFloat(Class<?> clazz) {
+		if ( clazz == float.class ) {
+			return true;
+		} else if ( clazz == Float.class ) {
+			return true;
+		}
+		return false;
+	}
+	public static Boolean isChar(Class<?> clazz) {
+		if ( clazz == char.class ) {
+			return true;
+		} else if ( clazz == Character.class ) {
+			return true;
+		}
+		return false;
+	}
 	/**
 	 * Comparable,Numberを実装しているかを判定
 	 * @param obj 対象オブジェクト

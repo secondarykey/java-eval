@@ -99,6 +99,7 @@ public class Token {
 	public enum Operator implements Type {
 
 		SEMICOLON(";",0),
+		COMMA(",",0),
 
 		PLUS("+",70),
 		MINUS("-",70),
@@ -191,7 +192,7 @@ public class Token {
 		INTEGER("\\d+"),
 		REAL ("\\d+\\.\\d+"),
 		VARIABLE("\\$\\w+"),
-		INVOKER("(\\$\\w+)(\\.)(\\w+)"),
+		INVOKER("(\\w+)(\\.)(\\w+)"),
 		IDENTIFIER("\\w+");
 
 		private Pattern pattern;
