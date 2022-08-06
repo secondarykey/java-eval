@@ -17,6 +17,11 @@ public class Token {
 
 	private List<Token> blocks;
 
+	/**
+	 * トークンを取り出した文字列上の位置(デバッグ用)
+	 */
+	private int position;
+
 	public Token(Type type, String val) {
 		this.type = type;
 		this.value = val;
@@ -83,7 +88,7 @@ public class Token {
 	 */
 	public enum Control implements Type {
 
-		NOPARAM,
+		LEXER_ERROR,
 		EOT;
 
 		@Override
@@ -229,5 +234,13 @@ public class Token {
 			return true;
 		}
 		return false;
+	}
+
+	public void setPosition(int position) {
+		this.position = position;
+	}
+
+	public int getPosition() {
+		return this.position;
 	}
 }

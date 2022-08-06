@@ -14,7 +14,11 @@ public class Variable {
 	 */
 	private Map<String,Object> values = new HashMap<>();
 
+	/**
+	 * ローカル変数
+	 */
 	private Map<String,Object> local = new HashMap<>();
+
 	/**
 	 * 大域変数追加
 	 * @param name 

@@ -19,25 +19,39 @@ public class AstParser {
 	
 	@SuppressWarnings("unused")
 	public static final Logger logger = Logger.getLogger(AstParser.class.getName());
-	
+
 	static {
         logger.setLevel(Level.INFO);
         System.setProperty("java.util.logging.SimpleFormatter.format",
                "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS.%1$tL %4$s %2$s %5$s%6$s%n");
 	}
-	
-	public static Ast parse(List<Token> tokens) {
-		logger.info(logger.getLevel().toString());
-		logger.info("--------------------------- Parse");
-		AstParser p = new AstParser();
-		return p.createAst(tokens);
+
+	/**
+	 * 
+	 * @param lex
+	 * @return
+	 */
+	public static Ast parse(Lexer lex) {
+		AstParser p = new AstParser(lex);
+		List<Token> list = lex.getTokenList();
+		return p.createAst(list);
 	}
 
-	private int idx = 0;
+	public static Ast parse(List<Token> tokenList) {
+		AstParser p = new AstParser();
+		return p.createAst(tokenList);
+	}
+
+	private Lexer lex = null;
 	private List<Token> values;
+	private int idx = 0;
 	private int limit;
 
 	private AstParser() {
+	}
+
+	public AstParser(Lexer lex) {
+		this.lex = lex;
 	}
 
 	/**
@@ -99,13 +113,12 @@ public class AstParser {
 	}
 
 	private void increment() {
-		logger.info("increment():" + idx);
 		if ( values.size() != (idx + 1) ) {
 			++idx;
 		} else {
 			limit--;
 			if ( limit == 0 ) {
-				throw new ParseException("Parseエラー:永久ループ解除用");
+				throw new ParseException(this,getToken(),"Parseエラー:永久ループ解除用");
 			}
 		}
 	}
@@ -161,7 +174,7 @@ public class AstParser {
 			right.setRight(get(priority-1));
 			return right;
 		} else {
-			throw new ParseException("オペレーター以外でのバインドが存在:" + right);
+			throw new ParseException(this,right,"オペレーター以外でのバインドが存在");
 		}
 	}
 
@@ -183,7 +196,7 @@ public class AstParser {
 				//TODO 複数引数の処理
 				Token next = getAndIncrement();
 				if ( !next.isType(Operator.OPEN) ) {
-					throw new ParseException("関数呼出がカッコから始まっていません。" + next);
+					throw new ParseException(this,next,"関数呼出がカッコから始まっていません。");
 				}
 
 				Token args = getToken();
@@ -199,7 +212,7 @@ public class AstParser {
 
 					Token next = getAndIncrement();
 					if ( !next.isType(Operator.OPEN) ) {
-						throw new ParseException("if文がカッコから始まっていません。" + next);
+						throw new ParseException(this,next,"if文がカッコから始まっていません。");
 					}
 		
 					//内部式を右辺に設定しておく
@@ -208,7 +221,7 @@ public class AstParser {
 	
 					Token close = getAndIncrement();
 					if ( !close.isType(Operator.CLOSE) ) {
-						throw new ParseException("if文が閉じられていません。" + close);
+						throw new ParseException(this,close,"if文が閉じられていません。");
 					}
 
 					Token op = getToken();
@@ -235,7 +248,7 @@ public class AstParser {
 
 					Token assign = getToken();
 					if ( !assign.isType(Operator.ASSIGN) ) {
-						throw new ParseException("let式に代入(=)が存在しません。");
+						throw new ParseException(this,assign,"let式に代入(=)が存在しません。");
 					}
 
 					increment();
@@ -262,7 +275,7 @@ public class AstParser {
 			logger.info("Controller:" + token);
 			return token;
 		} else {
-			throw new ParseException("lead()時の例外:" + token);
+			throw new ParseException(this,token,"lead()時の例外:");
 		}
 	}
 
@@ -306,7 +319,7 @@ public class AstParser {
 		logger.info("blocks()");
 
 		if ( !op.isType(Operator.OPEN_BLOCK) ) {
-			throw new ParseException("if文のブロックがありません" + op);
+			throw new ParseException(this,op,"if文のブロックがありません");
 		}
 
 		increment();
@@ -329,19 +342,38 @@ public class AstParser {
 	private void checkClose() {
 		Token token = getToken();
 		if ( !token.isType(Operator.CLOSE) )  {
-			throw new RuntimeException("閉じカッコがおかしい" + token);
+			throw new ParseException(this,token,"閉じカッコがおかしい");
 		}
 		increment();
 		return;
 	}
 
+	private Lexer getLexer() {
+		return lex;
+	}
 	/**
 	 * 解析時例外
 	 */
 	public class ParseException extends RuntimeException {
+
 		private static final long serialVersionUID = 1L;
-		public ParseException(String string) {
+		private Lexer lex;
+		private Token token;
+
+		public ParseException(AstParser p,Token token,String string) {
 			super(string);
+			this.lex = p.getLexer();
+			this.token = token;
+		}
+
+		@Override
+		public String getMessage() {
+			String msg = super.getMessage();
+			if ( lex != null ) {
+				msg = lex.debugLine(this.token,msg);
+			}
+			return msg;
 		}
 	}
+
 }

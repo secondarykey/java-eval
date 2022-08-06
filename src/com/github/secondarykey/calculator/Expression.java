@@ -16,8 +16,18 @@ import com.github.secondarykey.calculator.util.ClassUtil;
  * </pre>
  */
 public class Expression {
+
 	@SuppressWarnings("unused")
 	private static final Logger logger = Logger.getLogger(Expression.class.getName());
+
+	/**
+	 * 字句解析器(デバッグ用)
+	 */
+	private Lexer lex;
+
+	/**
+	 * 構文木
+	 */
 	private Ast ast;
 
 	/**
@@ -29,9 +39,8 @@ public class Expression {
 	 */
 	public Expression(String line) {
 		//字句解析実行
-		Lexer lex = new Lexer(line);
-		List<Token> tokenList = lex.analysis();
-		ast = AstParser.parse(tokenList);
+		lex = new Lexer(line);
+		ast = AstParser.parse(lex);
 	}
 
 	/**
@@ -73,15 +82,14 @@ public class Expression {
 
 		Type type = token.getType();
 		String val = token.getValue();
-		
-		System.out.println(type + ":" + val);
 
 		if ( type == Operator.NOT ) {
-			Object right = expression(token.right(),var);	
-			if ( !ClassUtil.isBoolean(right) ) {
-				throw new ExpressionException("Not演算子に対してBooelanじゃない値が入っています");
+			Token right = token.right();	
+			Object rightAns = expression(right,var);	
+			if ( !ClassUtil.isBoolean(rightAns) ) {
+				throw new ExpressionException(lex,right,"Not演算子に対してBooelanじゃない値が入っています");
 			}
-			return !(Boolean)right;
+			return !(Boolean)rightAns;
 		}
 
 		if ( type instanceof Value ) {
@@ -107,9 +115,8 @@ public class Expression {
 					
 					Token right = token.right();
 					Object rtn = expression(right,var);
-					
 					if ( !ClassUtil.isBoolean(rtn) ) {
-						throw new ExpressionException("if文の右辺がBoolean型ではありません。[" + rtn.getClass().getSimpleName() + "]");
+						throw new ExpressionException(lex,right,"if文の右辺がBoolean型ではありません。[" + rtn.getClass().getSimpleName() + "]");
 					} else {
 						Boolean e = (Boolean)rtn;
 						if ( e ) {
@@ -134,7 +141,7 @@ public class Expression {
 					return obj;
 				}
 	
-				throw new ExpressionException("予約語、変数が存在しません[" + val + "]");
+				throw new ExpressionException(lex,token,"予約語、変数が存在しません[" + val + "]");
 
 			} else if ( type.equals(Value.VARIABLE) ) {
 				return var.get(val);
@@ -177,10 +184,10 @@ public class Expression {
 			}
 
 			//評価を行う
-			return operation((Operator)type,left,right);
+			return operation(token,(Operator)type,left,right);
 		}
 
-		throw new ExpressionException("判定がないタイプです" + type.name());
+		throw new ExpressionException(lex,token,"判定がないタイプです" + type.name());
 	}
 
 
@@ -191,7 +198,7 @@ public class Expression {
 	 * @param right
 	 * @return
 	 */
-	private Object operation(Operator op, Object left, Object right) {
+	private Object operation(Token token,Operator op, Object left, Object right) {
 	
 		if ( op == Operator.EQ ) {
 			return left.equals(right);
@@ -202,20 +209,20 @@ public class Expression {
 			if ( ClassUtil.isComparableNumber(left) && 
 					ClassUtil.isComparableNumber(right) ) {
 				@SuppressWarnings("unchecked")
-				boolean rtn = compareToNumber(op,(Comparable<Number>)left,(Number)right);
+				boolean rtn = compareToNumber(token,op,(Comparable<Number>)left,(Number)right);
 				return rtn;
 			}
-			throw new ExpressionException("比較演算子の型がサポートされていません");
+			throw new ExpressionException(lex,token,"比較演算子の型がサポートされていません:[" + left.getClass().getSimpleName() + "]");
 		} else if ( op.isCalc() ) {
-			return calc(op,left,right);
+			return calc(token,op,left,right);
 		} else if ( op.isLogical() ) {
 			if ( ClassUtil.isBoolean(left) && 
 					ClassUtil.isBoolean(right) ) {
-				return logical(op,(Boolean)left,(Boolean)right);
+				return logical(token,op,(Boolean)left,(Boolean)right);
 			}
-			throw new ExpressionException("論理演算子の型がサポートされていません");
+			throw new ExpressionException(lex,token,"論理演算子の型がサポートされていません:[" + left.getClass().getSimpleName() + "]");
 		}
-		throw new ExpressionException("演算子がサポートされていません:" + op);
+		throw new ExpressionException(lex,token,"演算子がサポートされていません:" + op);
 	}
 
 	/**
@@ -225,7 +232,8 @@ public class Expression {
 	 * @param right
 	 * @return
 	 */
-	private Object calc(Operator op, Object left, Object right) {
+	private Object calc(Token token,Operator op, Object left, Object right) {
+
 		boolean d = true;
 		if ( left instanceof Integer ) {
 			d = false;
@@ -233,7 +241,7 @@ public class Expression {
 			if ( (left instanceof String) && op.equals(Operator.PLUS) ) {
 				return (String)left + (String)right;
 			}
-			throw new ExpressionException(String.format("%s は計算(%s)をサーポートしていません。",left.getClass().getSimpleName(),op));
+			throw new ExpressionException(lex,token,String.format("%s は計算(%s)をサーポートしていません。",left.getClass().getSimpleName(),op));
 		}
 
 		if ( op.equals(Operator.PLUS) ) {
@@ -253,7 +261,7 @@ public class Expression {
 			return (Integer)left % (Integer)right;
 		}
 
-		throw new ExpressionException(String.format("計算をサポートしてない演算子(%s)です。",op));
+		throw new ExpressionException(lex,token,String.format("計算をサポートしてない演算子(%s)です。",op));
 	}
 
 
@@ -264,7 +272,7 @@ public class Expression {
 	 * @param right
 	 * @return
 	 */
-	private Object logical(Operator op, Boolean left, Boolean right) {
+	private Object logical(Token token,Operator op, Boolean left, Boolean right) {
 		if ( Operator.AND.equals(op) ) {
 			return left && right;
 		} else if ( Operator.OR.equals(op) ) {
@@ -273,11 +281,11 @@ public class Expression {
 			// NOT も入るけど、呼び出し関数側ですでにチェックされている
 			return !right;
 		}
-		throw new ExpressionException("想定してない判定:" + op);
+		throw new ExpressionException(lex,token,"想定してない判定:" + op);
 	}
 
 
-	private boolean compareToNumber(Operator op,Comparable<Number> left,Number right) {
+	private boolean compareToNumber(Token token,Operator op,Comparable<Number> left,Number right) {
 		int rtn = left.compareTo(right);
 		if ( Operator.LT.equals(op) ) {
 			return rtn < 0;
@@ -288,7 +296,7 @@ public class Expression {
 		} else if ( Operator.GE.equals(op) ) {
 			return rtn >= 0;
 		}
-		throw new ExpressionException("想定してない判定:" + op);
+		throw new ExpressionException(lex,token,"想定してない判定:" + op);
 	}
 
 	/**
@@ -299,8 +307,21 @@ public class Expression {
 		 * 
 		 */
 		private static final long serialVersionUID = 1L;
-		public ExpressionException(String string) {
+		private Lexer lex;
+		private Token token;
+		public ExpressionException(Lexer lex,Token token,String string) {
 			super(string);
+			this.lex = lex;
+			this.token = token;
+		}
+
+		@Override
+		public String getMessage() {
+			String msg = super.getMessage();
+			if ( lex != null ) {
+				msg = lex.debugLine(this.token,msg);
+			}
+			return msg;
 		}
 	}
 
