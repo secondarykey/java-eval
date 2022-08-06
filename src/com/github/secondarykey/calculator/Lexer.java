@@ -56,6 +56,7 @@ public class Lexer {
 	 */
 	private int position;
 
+	private int lineIndex = 1;
 
 	private List<Token> tokenList;
 
@@ -66,6 +67,10 @@ public class Lexer {
 	public Lexer(String line) {
 		init();
 		value = line;
+	
+		if ( value.indexOf("\r\n") != -1 ) {
+			lineIndex = 2;
+		}
 		tokenList = tokenize();
 	}
 
@@ -202,6 +207,7 @@ public class Lexer {
 		String rtn = buf.trim();
 		//削除した文字列数を位置に足し込む
 		int trim = buf.length() - rtn.length();
+	
 		this.position += trim;
 		return rtn;
 	}	
@@ -245,21 +251,23 @@ public class Lexer {
 		    String line = null;
 		    while ((line = reader.readLine()) != null) {
 		    
-		    	pos += line.length();
+		    	int lg = line.length();
+		    	pos += lg;
 		    	//位置を超えた場合
 		    	if ( targetRow == 0 && pos >= tokenPos ) {
+
 		    		col = pos - tokenPos;
 		    		//行を設定
 		    		targetRow = row;
 
 		    		//マーク付きの文字列を作成
-		    		CharSequence linePre = line.substring(0, col);
-		    		CharSequence lineSuf = line.substring(col);
+		    		CharSequence linePre = line.substring(0, lg - col);
+		    		CharSequence lineSuf = line.substring(lg - col);
 		    		targetLine = linePre + Mark + lineSuf;
 		    		break;
 		    	}
 		    	//改行分足しておく
-		    	pos++;
+		    	pos = pos + lineIndex;
 		    	row++;
 		    }
 		} catch (IOException e) {
@@ -268,7 +276,7 @@ public class Lexer {
 		}
 
 		//対象行を作成
-		return String.format("%s\n[%d,%d]%s", msg,targetRow,col,targetLine);
+		return String.format("%s\n[%d,%d] %s", msg,targetRow,col,targetLine);
 	}
 
 	private String getValue() {

@@ -2,12 +2,24 @@ package com.github.secondarykey.calculator;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.LogManager;
 
 import org.junit.jupiter.api.Test;
 
 class CaluculatorTest {
+	
+	static {
+	    try {
+			LogManager.getLogManager().readConfiguration(
+			        Caluculator.class.getResourceAsStream("/logging.properties"));
+		} catch (SecurityException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}	
+	}
 
 	@Test
 	void testIF() {
@@ -52,7 +64,26 @@ class CaluculatorTest {
 		rtn = cal.eval(code);
 		assertEquals(rtn,"NG");
 	}
+	@Test 
+	void testIfMethod() {
+		Variable var = new Variable();
+		List<String> list = new ArrayList<>();
+		var.add("list", list);
+		var.add("flag", true);
+
+		Caluculator cal = Caluculator.create(var);
+
+		String code = TestUtil.get("/text/if_method.txt");
+		Object rtn = cal.eval(code);
+		assertEquals(rtn,"OK!");
 	
+		list = new ArrayList<>();
+		var.add("list", list);
+		var.add("flag", false);
+
+		rtn = cal.eval(code);
+		assertEquals(rtn,"NG");
+	}
 	@Test 
 	void testLet() {
 

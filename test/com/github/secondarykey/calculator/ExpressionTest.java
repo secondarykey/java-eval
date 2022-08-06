@@ -2,12 +2,23 @@ package com.github.secondarykey.calculator;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.LogManager;
 
 import org.junit.jupiter.api.*;
 
 class ExpressionTest {
+	static {
+	    try {
+			LogManager.getLogManager().readConfiguration(
+			        Caluculator.class.getResourceAsStream("/logging.properties"));
+		} catch (SecurityException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}	
+	}
 
 	@Test
 	void testIntValue() {
