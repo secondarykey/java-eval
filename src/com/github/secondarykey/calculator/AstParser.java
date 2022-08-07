@@ -102,7 +102,7 @@ public class AstParser {
 			logger.fine("PARSE BRANCH TOKEN:" + branch);
 			//EOTの場合追加しない
 			if ( !branch.isType(Control.EOT) && !branch.isType(Operator.CLOSE_BLOCK) &&
-			     !branch.isType(Operator.SEMICOLON) ) {
+			     !branch.isType(Control.SEMICOLON) ) {
 				rtn.add(branch);
 			}
 		}
@@ -173,7 +173,7 @@ public class AstParser {
 		if ( n.isType(Operator.CLOSE_BLOCK) ) {
 			return n;
 		}
-		if ( n.isType(Operator.SEMICOLON) ) {
+		if ( n.isType(Control.SEMICOLON) ) {
 			return n;
 		}
 
@@ -304,7 +304,7 @@ public class AstParser {
 			Token left = get(0);
 			checkClose();
 			return left;
-		} else if ( type.equals(Operator.SEMICOLON) ) {
+		} else if ( type.equals(Control.SEMICOLON) ) {
 			return token;
 		} else if ( type.equals(Operator.CLOSE_BLOCK)  ||   
 		            type.equals(Control.EOT) ) {
@@ -330,7 +330,7 @@ public class AstParser {
 		Token target = args;
 		while ( true ) {
 			Token work = getToken();
-			if ( work.isType(Operator.COMMA) || work.isType(Operator.CLOSE) ) {
+			if ( work.isType(Control.COMMA) || work.isType(Operator.CLOSE) ) {
 				tokens.add(target);
 				if ( work.isType(Operator.CLOSE) ) {
 					break;

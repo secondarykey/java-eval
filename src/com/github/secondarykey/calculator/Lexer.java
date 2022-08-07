@@ -27,6 +27,9 @@ public class Lexer {
 	private static List<Type> types = null;
 	static {
 		types = new ArrayList<Type>();
+		for ( Control val : Control.values() ) {
+			types.add(val);
+		}
 		for ( Operator op : Operator.values() ) {
 			types.add(op);
 		}
@@ -59,13 +62,18 @@ public class Lexer {
 	 * @param line 対象データ
 	 */
 	public Lexer(String line) {
+
+		logger.info("Lexer Start ===================================");
+		logger.finest(line);
 		value = line;
 		//改行がWindowsの場合、行判定時のインデックスを２にする
 		if ( value.indexOf("\r\n") != -1 ) {
 			lineIndex = 2;
 		}
+
 		//トークンの解析を行う
 		tokenList = tokenize();
+		logger.info("Lexer End   ===================================");
 	}
 
 	/**
@@ -166,7 +174,9 @@ public class Lexer {
             		//他はそのまま
             		String val = buf.substring(pre, suf);
             		Token token = new Token(t,val);
-
+            		
+            		logger.fine(token.toString());
+            		
             		//トークンの終端を設定する
             		this.position += index;
             		token.setPosition(this.position);
@@ -272,13 +282,13 @@ public class Lexer {
 		    	//位置を超えた場合
 		    	if ( targetRow == 0 && pos >= tokenPos ) {
 
-		    		col = pos - tokenPos;
+		    		col = lg - (pos - tokenPos);
 		    		//行を設定
 		    		targetRow = row;
 
 		    		//マーク付きの文字列を作成
-		    		CharSequence linePre = line.substring(0, lg - col);
-		    		CharSequence lineSuf = line.substring(lg - col);
+		    		CharSequence linePre = line.substring(0, col);
+		    		CharSequence lineSuf = line.substring(col);
 		    		targetLine = linePre + Mark + lineSuf;
 		    		break;
 		    	}

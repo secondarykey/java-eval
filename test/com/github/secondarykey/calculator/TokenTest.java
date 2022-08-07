@@ -7,6 +7,7 @@ import java.util.logging.LogManager;
 
 import org.junit.jupiter.api.Test;
 
+import com.github.secondarykey.calculator.Token.Control;
 import com.github.secondarykey.calculator.Token.Value;
 
 class TokenTest {
@@ -20,9 +21,17 @@ class TokenTest {
 		}	
 	}
 
+	
+	
+	
 	@Test
-	void testValue() {
-		
+	void testCommentIndex() {
+		assertEquals(Control.COMMENT.getLastIndex("//test.index(\"test\",test)"),25);
+		assertEquals(Control.COMMENT.getLastIndex("//test.index(\"test\",test)\nssss"),25);
+	}
+	
+	@Test
+	void testInvokeIndex() {
 		assertEquals(Value.INVOKER.getLastIndex("test.index();test"),10);
 		assertEquals(Value.INVOKER.getLastIndex("test.index(\"test\")"),10);
 		assertEquals(Value.INVOKER.getLastIndex("test.index(test)"),10);

@@ -106,6 +106,8 @@ public class Token {
 			return ((Operator)type).getPriority();
 		} else if ( type.equals(Control.EOT) ) {
 			return -1;
+		} else if ( type.equals(Control.SEMICOLON) ) {
+			return -1;
 		}
 		throw new RuntimeException("優先順位は存在しないはず" + this);
 	}
@@ -173,11 +175,6 @@ public class Token {
 		return this.position;
 	}	
 	
-	
-	
-	
-	
-	
 	/**
 	 * トークン種別
 	 * <pre>
@@ -194,6 +191,9 @@ public class Token {
 	 */
 	public enum Control implements Type {
 
+		SEMICOLON(";"),
+		COMMA(","),
+		COMMENT("//"),
 		/**
 		 * 字句エラー時に利用
 		 */
@@ -202,10 +202,38 @@ public class Token {
 		 * 構文解析時に最後に追加
 		 */
 		EOT;
+	
+		private String value;
+
+		Control() {
+		}
+
+		Control(String val) {
+			this.value = val;
+		}
+		
 
 		@Override
 		public int getLastIndex(String val) {
+
+			if ( this.value == null ) {
+				return -1;
+			}
+
+			int index = val.indexOf(this.value);
+			if ( index == 0 ) {
+				if ( this.equals(COMMENT) ) {
+					index = val.indexOf("\n");
+					if ( index != -1 ) {
+						return val.length();
+					}
+					//最後までコメントとする
+					return index;
+				}
+				return this.value.length();
+			}
 			return -1;
+
 		}
 	}
 
@@ -214,9 +242,6 @@ public class Token {
 	 * @author secon
 	 */
 	public enum Operator implements Type {
-
-		SEMICOLON(";",0),
-		COMMA(",",0),
 
 		PLUS("+",70),
 		MINUS("-",70),
@@ -284,7 +309,7 @@ public class Token {
 		public int getLastIndex(String v) {
 			int index = v.indexOf(this.val);
 			if ( index == 0 ) {
-				return index + this.val.length();
+				return this.val.length();
 			}
 			return -1;
 		}
