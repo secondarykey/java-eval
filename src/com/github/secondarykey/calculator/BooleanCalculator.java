@@ -28,7 +28,6 @@ public class BooleanCalculator {
 	}
 	
 	public void compile() {
-		
 		// 引数が網羅されているか？
 	}
 

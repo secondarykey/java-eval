@@ -21,29 +21,18 @@ public class Lexer {
 	@SuppressWarnings("unused")
 	private static final Logger logger = Logger.getLogger(Lexer.class.getName());
 
-
 	/**
 	 * 判定用のタイプリスト
 	 */
 	private static List<Type> types = null;
-
-	/**
-	 * 初期化
-	 */
-	private static void init() {
-		/**
-		 * 比較用に作っておくタイプをすべてリスト化
-		 */
-		if ( types == null ) {
-			types = new ArrayList<Type>();
-			for ( Operator op : Operator.values() ) {
-				types.add(op);
-			}
-			for ( Value val : Value.values() ) {
-				types.add(val);
-			}
+	static {
+		types = new ArrayList<Type>();
+		for ( Operator op : Operator.values() ) {
+			types.add(op);
 		}
-		return;
+		for ( Value val : Value.values() ) {
+			types.add(val);
+		}
 	}
 
 	/**
@@ -55,9 +44,14 @@ public class Lexer {
 	 * デバッグ用のポジション
 	 */
 	private int position;
-
+	/**
+	 * デバッグ用行数(改行する際のインデックス値)
+	 */
 	private int lineIndex = 1;
 
+	/**
+	 * 戻り値(字句解析後のリスト)
+	 */
 	private List<Token> tokenList;
 
 	/**
@@ -65,18 +59,18 @@ public class Lexer {
 	 * @param line 対象データ
 	 */
 	public Lexer(String line) {
-		init();
 		value = line;
-	
+		//改行がWindowsの場合、行判定時のインデックスを２にする
 		if ( value.indexOf("\r\n") != -1 ) {
 			lineIndex = 2;
 		}
+		//トークンの解析を行う
 		tokenList = tokenize();
 	}
 
 	/**
 	 * 解析
-	 * @return
+	 * @return トークンリスト
 	 */
 	private List<Token> tokenize() {
 
@@ -178,7 +172,6 @@ public class Lexer {
             		token.setPosition(this.position);
 
             		rtn.add(token);
-
             		buf = buf.substring(index);
             		notfound = false;
             		break;
@@ -211,6 +204,22 @@ public class Lexer {
 		this.position += trim;
 		return rtn;
 	}	
+	
+	/**
+	 * プログラム文字列の取得
+	 * @return
+	 */
+	private String getValue() {
+		return value;
+	}
+
+	/**
+	 * 字句解析後のトークンを取得
+	 * @return
+	 */
+	public List<Token> getTokenList() {
+		return tokenList;
+	}
 
 	/**
 	 * 字句解析例外
@@ -223,13 +232,20 @@ public class Lexer {
 		}
 	}
 
+	/**
+	 * エラー位置のマーク
+	 */
 	private static final String Mark = "[*]";
 	
 	/**
 	 * エラー時に原文の位置を表示
-	 * @param token
-	 * @param msg
-	 * @return
+	 * <pre>
+	 * 解析中にTokenには位置を埋め込んでいる為、エラー発生時に
+	 * そのトークンの位置を文字列化する
+	 * </pre>
+	 * @param token 対象トークン
+	 * @param msg メッセージ
+	 * @return 位置などを追加したエラー情報
 	 */
 	public String debugLine(Token token, String msg) {
 
@@ -277,13 +293,5 @@ public class Lexer {
 
 		//対象行を作成
 		return String.format("%s\n[%d,%d] %s", msg,targetRow,col,targetLine);
-	}
-
-	private String getValue() {
-		return value;
-	}
-
-	public List<Token> getTokenList() {
-		return tokenList;
 	}
 }

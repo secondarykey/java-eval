@@ -3,12 +3,15 @@ package com.github.secondarykey.calculator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 
 /**
  * 変数領域
  */
 public class Variable {
-	
+
+	@SuppressWarnings("unused")
+	public static final Logger logger = Logger.getLogger(Variable.class.getName());	
 	/**
 	 * 大域変数
 	 */

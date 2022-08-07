@@ -20,31 +20,57 @@ public class AstParser {
 	public static final Logger logger = Logger.getLogger(AstParser.class.getName());
 
 	/**
-	 * 
-	 * @param lex
-	 * @return
+	 * AST解析
+	 * @param lex 字句解析器
+	 * @return 構文木
 	 */
 	public static Ast parse(Lexer lex) {
 		AstParser p = new AstParser(lex);
 		List<Token> list = lex.getTokenList();
-		logger.info("Parse Start " + logger.getName());
-		return p.createAst(list);
+		logger.info("Parse Start ==============================");
+		Ast ast = p.createAst(list);
+		logger.info("Parse End   ==============================");
+		return ast;
 	}
 
+	/**
+	 * AST解析
+	 * @param tokenList トークンリスト
+	 * @return 構文木
+	 */
 	public static Ast parse(List<Token> tokenList) {
 		AstParser p = new AstParser();
 		return p.createAst(tokenList);
 	}
 
+	/**
+	 * 字句解析器(デバッグ用)
+	 */
 	private Lexer lex = null;
+	/**
+	 * 字句リスト
+	 */
 	private List<Token> values;
+	/**
+	 * 字句インデックス
+	 */
 	private int idx = 0;
+	/**
+	 * 永久ループ処理用(基本的に使われる場合、エラーが起こっている)
+	 */
 	private int limit;
 
+	/**
+	 * コンストラクタ
+	 */
 	private AstParser() {
 	}
 
-	public AstParser(Lexer lex) {
+	/**
+	 * コンストラクタ(字句解析器)
+	 * @param lex 字句解析器
+	 */
+	private AstParser(Lexer lex) {
 		this.lex = lex;
 	}
 
@@ -52,6 +78,7 @@ public class AstParser {
 	 * 構文解析
 	 * <pre>
 	 * 字句解析リストから構文解析を行う
+	 * ParserインスタンスがLexerから作成されている場合のみ全体のデバッグを表示可能
 	 * </pre>
 	 */
 	private Ast createAst(List<Token> values) {
@@ -83,15 +110,23 @@ public class AstParser {
 		return new Ast(rtn);
 	}
 
+	/**
+	 * 次の字句を持っているか？
+	 * @return 存在する場合true
+	 */
 	private boolean hasNext() {
 		logger.fine("hasNext():" + idx);
-		Token token = values.get(idx);
+		Token token = getToken();
 		if ( token.isType(Control.EOT) ) {
 			return false;
 		}
 		return true;
 	}
 
+	/**
+	 * 処理時点でのトークンの取得
+	 * @return 現在のトークン
+	 */
 	private Token getToken() {
 		return values.get(idx);
 	}
@@ -106,6 +141,9 @@ public class AstParser {
 		return rtn;
 	}
 
+	/**
+	 * インデックス加算
+	 */
 	private void increment() {
 		if ( values.size() != (idx + 1) ) {
 			++idx;
@@ -119,8 +157,11 @@ public class AstParser {
 
 	/**
 	 * 要素の取得
-	 * @param priority
-	 * @return
+	 * <pre>
+	 * 現在の要素を取得し、右辺等の設定を行う
+	 * </pre>
+	 * @param priority 優先順位
+	 * @return 解析したトークン
 	 */
 	private Token get(int priority) {
 
@@ -155,9 +196,10 @@ public class AstParser {
 	 * 左辺右辺を代入
 	 * <pre>
 	 * 優先順位の状況で設定を行う
+	 * ただし、オペレーターでしか処理を行わない
 	 * </pre>
-	 * @param left
-	 * @param right
+	 * @param left 左辺
+	 * @param right 右辺
 	 * @return
 	 */
 	private Token bind(Token left, Token right ) {
@@ -276,7 +318,7 @@ public class AstParser {
 	/**
 	 * 関数用の引数を作成
 	 * @param args 先頭のトークン
-	 * @return
+	 * @return 関数部分の引数のトークンリスト
 	 */
 	private List<Token> arguments(Token args) {
 
@@ -303,7 +345,7 @@ public class AstParser {
 	/**
 	 * ブロックを作成
 	 * <pre>
-	 * 
+	 * {} で囲んだ位置を実行用に作成
 	 * </pre>
 	 * @param op 開始位置
 	 * @return 内部のTokenリスト
@@ -333,6 +375,9 @@ public class AstParser {
 		return blocks;
 	}
 
+	/**
+	 * 閉じカッコのチェック 
+	 */
 	private void checkClose() {
 		Token token = getToken();
 		if ( !token.isType(Operator.CLOSE) )  {
@@ -342,18 +387,39 @@ public class AstParser {
 		return;
 	}
 
+	/**
+	 * 字句解析器の取得(デバッグ用)
+	 * @return 字句解析器
+	 */
 	private Lexer getLexer() {
 		return lex;
 	}
+
 	/**
 	 * 解析時例外
+	 * <pre>
+	 * 渡されたパーサーの字句解析器により、エラー位置を特定し表示できるようにする
+	 * ただしパーサーがLexerで作成されてない場合はエラーメッセージのみとなる。
+	 * </pre>
 	 */
 	public class ParseException extends RuntimeException {
 
 		private static final long serialVersionUID = 1L;
+		/**
+		 * 字句解析器
+		 */
 		private Lexer lex;
+		/**
+		 * 対象トークン
+		 */
 		private Token token;
 
+		/**
+		 * 解析時例外コンストラクタ
+		 * @param p 対象パーサー
+		 * @param token 対象トークン
+		 * @param string 対象文字列
+		 */
 		public ParseException(AstParser p,Token token,String string) {
 			super(string);
 			this.lex = p.getLexer();
