@@ -2,6 +2,7 @@ package com.github.secondarykey.calculator.util;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.logging.Logger;
 
 /**
  * リフレクション用のユーティリティ
@@ -9,6 +10,9 @@ import java.lang.reflect.Method;
  */
 public class ClassUtil {
 
+	@SuppressWarnings("unused")
+	public static final Logger logger = Logger.getLogger(ClassUtil.class.getName());	
+	
 	/**
 	 * メソッド呼び出し
 	 * <pre>
@@ -24,8 +28,8 @@ public class ClassUtil {
 		Class<?> clazz = target.getClass();
 		Class<?>[] argsClazz = null;
 		
-		System.out.println("Class:" + target.getClass().getSimpleName());
-		System.out.println("Method:" + name);
+		logger.fine("Class:" + target.getClass().getSimpleName());
+		logger.fine("Method:" + name);
 
 		//引数指定がある場合引数のクラス群を設定
 		if ( args != null ) {
@@ -37,11 +41,11 @@ public class ClassUtil {
 					throw new RuntimeException("Nullを許容していません");
 				}
 				argsClazz[idx] = arg.getClass();
-				System.out.println(idx + ":" + arg.getClass().getSimpleName());
+				logger.fine(idx + ":" + arg.getClass().getSimpleName());
 				idx++;
 			}
 		} else {
-			System.out.println("引数なし");
+			logger.fine("引数なし");
 		}
 
 		Method method = null;
@@ -70,8 +74,8 @@ public class ClassUtil {
 
 			for ( Class<?> type : types ) {
 				
-				System.out.println(idx + ":" + type.getSimpleName());
-				System.out.println(idx + ":" + argsClazz[idx].getSimpleName());
+				logger.fine(idx + ":" + type.getSimpleName());
+				logger.fine(idx + ":" + argsClazz[idx].getSimpleName());
 
 				//型が派生関係にあるかを確認
 				if ( !same(type,argsClazz[idx]) ) {

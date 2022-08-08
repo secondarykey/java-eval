@@ -2,12 +2,23 @@ package com.github.secondarykey.calculator;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.LogManager;
 
 import org.junit.jupiter.api.*;
 
 class ExpressionTest {
+	static {
+	    try {
+			LogManager.getLogManager().readConfiguration(
+			        Caluculator.class.getResourceAsStream("/logging.properties"));
+		} catch (SecurityException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}	
+	}
 
 	@Test
 	void testIntValue() {
@@ -110,8 +121,7 @@ class ExpressionTest {
 		assertEquals((Integer)div.eval(null),3);
 		Expression mod = new Expression("5 % 3");
 		assertEquals((Integer)mod.eval(null),2);
-		
-		
+
 		plus = new Expression("1.2 + 1.3");
 		assertEquals((Double)plus.eval(null),2.5,3);
 		minus = new Expression("1.4 - 1.0");

@@ -2,7 +2,6 @@ package com.github.secondarykey.calculator;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.github.secondarykey.calculator.Token.Control;
@@ -19,40 +18,76 @@ public class AstParser {
 	
 	@SuppressWarnings("unused")
 	public static final Logger logger = Logger.getLogger(AstParser.class.getName());
-	
-	static {
-        logger.setLevel(Level.INFO);
-        System.setProperty("java.util.logging.SimpleFormatter.format",
-               "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS.%1$tL %4$s %2$s %5$s%6$s%n");
-	}
-	
-	public static Ast parse(List<Token> tokens) {
-		logger.info(logger.getLevel().toString());
-		logger.info("--------------------------- Parse");
-		AstParser p = new AstParser();
-		return p.createAst(tokens);
+
+	/**
+	 * AST解析
+	 * @param lex 字句解析器
+	 * @return 構文木
+	 */
+	public static Ast parse(Lexer lex) {
+		AstParser p = new AstParser(lex);
+		List<Token> list = lex.getTokenList();
+		logger.info("Parse Start ==============================");
+		Ast ast = p.createAst(list);
+		logger.info("Parse End   ==============================");
+		return ast;
 	}
 
-	private int idx = 0;
+	/**
+	 * AST解析
+	 * @param tokenList トークンリスト
+	 * @return 構文木
+	 */
+	public static Ast parse(List<Token> tokenList) {
+		AstParser p = new AstParser();
+		return p.createAst(tokenList);
+	}
+
+	/**
+	 * 字句解析器(デバッグ用)
+	 */
+	private Lexer lex = null;
+	/**
+	 * 字句リスト
+	 */
 	private List<Token> values;
+	/**
+	 * 字句インデックス
+	 */
+	private int idx = 0;
+	/**
+	 * 永久ループ処理用(基本的に使われる場合、エラーが起こっている)
+	 */
 	private int limit;
 
+	/**
+	 * コンストラクタ
+	 */
 	private AstParser() {
+	}
+
+	/**
+	 * コンストラクタ(字句解析器)
+	 * @param lex 字句解析器
+	 */
+	private AstParser(Lexer lex) {
+		this.lex = lex;
 	}
 
 	/**
 	 * 構文解析
 	 * <pre>
 	 * 字句解析リストから構文解析を行う
+	 * ParserインスタンスがLexerから作成されている場合のみ全体のデバッグを表示可能
 	 * </pre>
 	 */
 	private Ast createAst(List<Token> values) {
 
 		limit = values.size();
 
-		logger.info("トークンサイズ"+limit);
+		logger.fine("トークンサイズ"+limit);
 		for ( Token token : values ) {
-			logger.info(token.getValue());
+			logger.finest(token.getValue());
 		}
 
 		this.values = new ArrayList<>(values);
@@ -61,13 +96,13 @@ public class AstParser {
 		List<Token> rtn = new ArrayList<>();
 
 		while( hasNext() ) {
-			logger.info("Parser loop get()");
+			logger.fine("Parser loop get()");
 			Token branch = get(0);
 
-			logger.info("PARSE BRANCH TOKEN:" + branch);
+			logger.fine("PARSE BRANCH TOKEN:" + branch);
 			//EOTの場合追加しない
 			if ( !branch.isType(Control.EOT) && !branch.isType(Operator.CLOSE_BLOCK) &&
-			     !branch.isType(Operator.SEMICOLON) ) {
+			     !branch.isType(Control.SEMICOLON) ) {
 				rtn.add(branch);
 			}
 		}
@@ -75,15 +110,23 @@ public class AstParser {
 		return new Ast(rtn);
 	}
 
+	/**
+	 * 次の字句を持っているか？
+	 * @return 存在する場合true
+	 */
 	private boolean hasNext() {
-		logger.info("hasNext():" + idx);
-		Token token = values.get(idx);
+		logger.fine("hasNext():" + idx);
+		Token token = getToken();
 		if ( token.isType(Control.EOT) ) {
 			return false;
 		}
 		return true;
 	}
 
+	/**
+	 * 処理時点でのトークンの取得
+	 * @return 現在のトークン
+	 */
 	private Token getToken() {
 		return values.get(idx);
 	}
@@ -98,34 +141,39 @@ public class AstParser {
 		return rtn;
 	}
 
+	/**
+	 * インデックス加算
+	 */
 	private void increment() {
-		logger.info("increment():" + idx);
 		if ( values.size() != (idx + 1) ) {
 			++idx;
 		} else {
 			limit--;
 			if ( limit == 0 ) {
-				throw new ParseException("Parseエラー:永久ループ解除用");
+				throw new ParseException(this,getToken(),"Parseエラー:永久ループ解除用");
 			}
 		}
 	}
 
 	/**
 	 * 要素の取得
-	 * @param priority
-	 * @return
+	 * <pre>
+	 * 現在の要素を取得し、右辺等の設定を行う
+	 * </pre>
+	 * @param priority 優先順位
+	 * @return 解析したトークン
 	 */
 	private Token get(int priority) {
 
 		Token n = getAndIncrement();
-		logger.info("Token:" + n);
+		logger.fine("Token:" + n);
 		if ( n.isType(Control.EOT) ) {
 			return n;
 		}
 		if ( n.isType(Operator.CLOSE_BLOCK) ) {
 			return n;
 		}
-		if ( n.isType(Operator.SEMICOLON) ) {
+		if ( n.isType(Control.SEMICOLON) ) {
 			return n;
 		}
 
@@ -148,9 +196,10 @@ public class AstParser {
 	 * 左辺右辺を代入
 	 * <pre>
 	 * 優先順位の状況で設定を行う
+	 * ただし、オペレーターでしか処理を行わない
 	 * </pre>
-	 * @param left
-	 * @param right
+	 * @param left 左辺
+	 * @param right 右辺
 	 * @return
 	 */
 	private Token bind(Token left, Token right ) {
@@ -161,7 +210,7 @@ public class AstParser {
 			right.setRight(get(priority-1));
 			return right;
 		} else {
-			throw new ParseException("オペレーター以外でのバインドが存在:" + right);
+			throw new ParseException(this,right,"オペレーター以外でのバインドが存在");
 		}
 	}
 
@@ -172,7 +221,7 @@ public class AstParser {
 	 */
 	private Token lead(Token token) {
 	
-		logger.info(token.toString());
+		logger.fine(token.toString());
 		
 		Type type = token.getType();
 
@@ -180,17 +229,37 @@ public class AstParser {
 			//呼び出し処理の場合
 			if ( type.equals(Value.INVOKER) ) {
 
+				logger.info("Invoker Start:");
+
 				//TODO 複数引数の処理
 				Token next = getAndIncrement();
 				if ( !next.isType(Operator.OPEN) ) {
-					throw new ParseException("関数呼出がカッコから始まっていません。" + next);
+					throw new ParseException(this,next,"関数呼出がカッコから始まっていません。");
 				}
 
 				Token args = getToken();
 				token.setBlocks(arguments(args));
-				
+
+				Token close = getToken();
+				if ( !close.isType(Operator.CLOSE) ) {
+					throw new ParseException(this,next,"関数呼出の閉じカッコがおかしい。");
+				}
+
+				//閉じカッコを飛ばす
 				increment();
-				return token;
+				Token end = getToken();
+				if ( end.isType(Control.EOT) || end.isType(Control.SEMICOLON) ||
+						  end.isType(Operator.CLOSE) ) {
+					//TODO  if文中だった場合、、、少しおかしいかな？
+					return token;
+				}
+
+				end.setLeft(token);
+				increment();
+				Token right = get(0);
+				end.setRight(right);
+				return end;
+
 			} else if ( type.equals(Value.IDENTIFIER) ) {
 
 				String val = token.getValue();
@@ -199,7 +268,7 @@ public class AstParser {
 
 					Token next = getAndIncrement();
 					if ( !next.isType(Operator.OPEN) ) {
-						throw new ParseException("if文がカッコから始まっていません。" + next);
+						throw new ParseException(this,next,"if文がカッコから始まっていません。");
 					}
 		
 					//内部式を右辺に設定しておく
@@ -208,14 +277,13 @@ public class AstParser {
 	
 					Token close = getAndIncrement();
 					if ( !close.isType(Operator.CLOSE) ) {
-						throw new ParseException("if文が閉じられていません。" + close);
+						throw new ParseException(this,close,"if文が閉じられていません。");
 					}
 
 					Token op = getToken();
 					//中括弧を確認
 					token.setBlocks(blocks(op));
 
-					logger.info("return " + token);
 					//if文を返す
 					return token;
 
@@ -235,7 +303,7 @@ public class AstParser {
 
 					Token assign = getToken();
 					if ( !assign.isType(Operator.ASSIGN) ) {
-						throw new ParseException("let式に代入(=)が存在しません。");
+						throw new ParseException(this,assign,"let式に代入(=)が存在しません。");
 					}
 
 					increment();
@@ -255,21 +323,21 @@ public class AstParser {
 			Token left = get(0);
 			checkClose();
 			return left;
-		} else if ( type.equals(Operator.SEMICOLON) ) {
+		} else if ( type.equals(Control.SEMICOLON) ) {
 			return token;
 		} else if ( type.equals(Operator.CLOSE_BLOCK)  ||   
 		            type.equals(Control.EOT) ) {
-			logger.info("Controller:" + token);
+			logger.fine("Controller:" + token);
 			return token;
 		} else {
-			throw new ParseException("lead()時の例外:" + token);
+			throw new ParseException(this,token,"lead()時の例外:");
 		}
 	}
 
 	/**
 	 * 関数用の引数を作成
 	 * @param args 先頭のトークン
-	 * @return
+	 * @return 関数部分の引数のトークンリスト
 	 */
 	private List<Token> arguments(Token args) {
 
@@ -281,7 +349,7 @@ public class AstParser {
 		Token target = args;
 		while ( true ) {
 			Token work = getToken();
-			if ( work.isType(Operator.COMMA) || work.isType(Operator.CLOSE) ) {
+			if ( work.isType(Control.COMMA) || work.isType(Operator.CLOSE) ) {
 				tokens.add(target);
 				if ( work.isType(Operator.CLOSE) ) {
 					break;
@@ -296,17 +364,17 @@ public class AstParser {
 	/**
 	 * ブロックを作成
 	 * <pre>
-	 * 
+	 * {} で囲んだ位置を実行用に作成
 	 * </pre>
 	 * @param op 開始位置
 	 * @return 内部のTokenリスト
 	 */
 	private List<Token> blocks(Token op) {
 		
-		logger.info("blocks()");
+		logger.fine("blocks()");
 
 		if ( !op.isType(Operator.OPEN_BLOCK) ) {
-			throw new ParseException("if文のブロックがありません" + op);
+			throw new ParseException(this,op,"if文のブロックがありません");
 		}
 
 		increment();
@@ -314,7 +382,7 @@ public class AstParser {
 
 		while ( true ) {
 			Token n = get(0);
-			logger.info("block:" + n);
+			logger.fine("block:" + n);
 			if ( n.isType(Operator.CLOSE_BLOCK) ) {
 				break;
 			}
@@ -322,26 +390,69 @@ public class AstParser {
 			blocks.add(n);
 		}
 
-		logger.info("block End");
+		logger.fine("block End");
 		return blocks;
 	}
 
+	/**
+	 * 閉じカッコのチェック 
+	 */
 	private void checkClose() {
 		Token token = getToken();
 		if ( !token.isType(Operator.CLOSE) )  {
-			throw new RuntimeException("閉じカッコがおかしい" + token);
+			throw new ParseException(this,token,"閉じカッコがおかしい");
 		}
 		increment();
 		return;
 	}
 
 	/**
+	 * 字句解析器の取得(デバッグ用)
+	 * @return 字句解析器
+	 */
+	private Lexer getLexer() {
+		return lex;
+	}
+
+	/**
 	 * 解析時例外
+	 * <pre>
+	 * 渡されたパーサーの字句解析器により、エラー位置を特定し表示できるようにする
+	 * ただしパーサーがLexerで作成されてない場合はエラーメッセージのみとなる。
+	 * </pre>
 	 */
 	public class ParseException extends RuntimeException {
+
 		private static final long serialVersionUID = 1L;
-		public ParseException(String string) {
+		/**
+		 * 字句解析器
+		 */
+		private Lexer lex;
+		/**
+		 * 対象トークン
+		 */
+		private Token token;
+
+		/**
+		 * 解析時例外コンストラクタ
+		 * @param p 対象パーサー
+		 * @param token 対象トークン
+		 * @param string 対象文字列
+		 */
+		public ParseException(AstParser p,Token token,String string) {
 			super(string);
+			this.lex = p.getLexer();
+			this.token = token;
+		}
+
+		@Override
+		public String getMessage() {
+			String msg = super.getMessage();
+			if ( lex != null ) {
+				msg = lex.debugLine(this.token,msg);
+			}
+			return msg;
 		}
 	}
+
 }
