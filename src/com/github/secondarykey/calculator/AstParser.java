@@ -87,7 +87,7 @@ public class AstParser {
 
 		logger.fine("トークンサイズ"+limit);
 		for ( Token token : values ) {
-			logger.fine(token.getValue());
+			logger.finest(token.getValue());
 		}
 
 		this.values = new ArrayList<>(values);
@@ -229,6 +229,8 @@ public class AstParser {
 			//呼び出し処理の場合
 			if ( type.equals(Value.INVOKER) ) {
 
+				logger.info("Invoker Start:");
+
 				//TODO 複数引数の処理
 				Token next = getAndIncrement();
 				if ( !next.isType(Operator.OPEN) ) {
@@ -237,9 +239,27 @@ public class AstParser {
 
 				Token args = getToken();
 				token.setBlocks(arguments(args));
-				
+
+				Token close = getToken();
+				if ( !close.isType(Operator.CLOSE) ) {
+					throw new ParseException(this,next,"関数呼出の閉じカッコがおかしい。");
+				}
+
+				//閉じカッコを飛ばす
 				increment();
-				return token;
+				Token end = getToken();
+				if ( end.isType(Control.EOT) || end.isType(Control.SEMICOLON) ||
+						  end.isType(Operator.CLOSE) ) {
+					//TODO  if文中だった場合、、、少しおかしいかな？
+					return token;
+				}
+
+				end.setLeft(token);
+				increment();
+				Token right = get(0);
+				end.setRight(right);
+				return end;
+
 			} else if ( type.equals(Value.IDENTIFIER) ) {
 
 				String val = token.getValue();
@@ -264,7 +284,6 @@ public class AstParser {
 					//中括弧を確認
 					token.setBlocks(blocks(op));
 
-					logger.fine("return " + token);
 					//if文を返す
 					return token;
 

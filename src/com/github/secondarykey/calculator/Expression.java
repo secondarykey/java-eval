@@ -1,6 +1,7 @@
 package com.github.secondarykey.calculator;
 
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.github.secondarykey.calculator.Token.Operator;
@@ -38,8 +39,13 @@ public class Expression {
 	 */
 	public Expression(String line) {
 		//字句解析実行
-		lex = new Lexer(line);
-		ast = AstParser.parse(lex);
+		try {
+			lex = new Lexer(line);
+			ast = AstParser.parse(lex);
+		} catch (Exception ex) { 
+			logger.severe(ex.toString());
+			throw ex;
+		}
 	}
 
 	/**
@@ -54,6 +60,11 @@ public class Expression {
 		List<Token> tokens = ast.get();
 		for ( Token token : tokens ) {
 			Object rtn;
+
+			if ( logger.isLoggable(Level.FINEST) ) {
+				logger.finest(debug(token,0));
+			}
+
 			try {
 				rtn = expression(token,arguments);
 			} catch (Return e) {
@@ -67,6 +78,23 @@ public class Expression {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * トークンの位置を出力
+	 * @param token
+	 * @return
+	 */
+	private String debug(Token token,int depth) {
+
+		String line = "Token is Null";
+		if ( token != null ) {
+			line = String.format("%s%s\n"," ".repeat(depth * 2), token);
+			line += String.format("%s : Left\n",debug(token.left(),depth+1));
+			line += String.format("%s : Right\n",debug(token.right(), depth+1));
+		}
+
+		return line;
 	}
 
 	/**
